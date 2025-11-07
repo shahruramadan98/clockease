@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'auth_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,11 +16,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ClockEase',
-      home: Scaffold(
-        appBar: AppBar(title: const Text('ClockEase')),
-        body: const Center(child: Text('Firebase Connected ✅')),
-      ),
+      debugShowCheckedModeBanner: false,
+      title: 'Clockease',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const AuthGate(), // 🔥 Tukar sini ke AuthGate()
     );
   }
 }
