@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "60493495817",
-    "project_id": "clockease-e1a29",
-    "storage_bucket": "clockease-e1a29.firebasestorage.app"
+    "project_number": "492759847959",
+    "project_id": "clockease",
+    "storage_bucket": "clockease.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:60493495817:android:c785cda38fdc773d4f82d8",
+        "mobilesdk_app_id": "1:492759847959:android:19d31f0cf73b7ccaf3f852",
         "android_client_info": {
           "package_name": "com.example.clockease"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDLYcZ6Lh7RAS0-JSdwwBJRyQlKwVjNYdA"
+          "current_key": "AIzaSyCb5njChWMDlX3a-gp3olaBy_hIaqmhXOI"
         }
       ],
       "services": {
