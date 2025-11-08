@@ -26,9 +26,9 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Login successful')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('✅ Login successful')));
         Navigator.pushReplacementNamed(context, '/home');
       }
     } on FirebaseAuthException catch (e) {
@@ -41,13 +41,13 @@ class _LoginPageState extends State<LoginPage> {
         message = e.message ?? 'An error occurred.';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ $message')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('❌ $message')));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('⚠️ ${e.toString()}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('⚠️ ${e.toString()}')));
     } finally {
       setState(() {
         _isLoading = false;
@@ -66,9 +66,9 @@ class _LoginPageState extends State<LoginPage> {
         const SnackBar(content: Text('🎉 Registration successful!')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('⚠️ ${e.toString()}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('⚠️ ${e.toString()}')));
     }
   }
 
@@ -103,9 +103,7 @@ class _LoginPageState extends State<LoginPage> {
               width: 250,
               decoration: const BoxDecoration(
                 color: Color(0xFF4CBFDA),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(150),
-                ),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(150)),
               ),
             ),
           ),
@@ -120,10 +118,7 @@ class _LoginPageState extends State<LoginPage> {
                   // Logo + Title
                   Column(
                     children: [
-                      Image.asset(
-                        'assets/images/logo.png',
-                        height: 80,
-                      ),
+                      Image.asset('assets/images/logo.png', height: 80),
                       const SizedBox(height: 8),
                       const Text(
                         'ClockEase',
@@ -206,9 +201,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       onPressed: _isLoading ? null : _signIn,
                       child: _isLoading
-                          ? const CircularProgressIndicator(
-                              color: Colors.white,
-                            )
+                          ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
                               'Login',
                               style: TextStyle(

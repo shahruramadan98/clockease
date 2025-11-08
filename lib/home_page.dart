@@ -10,17 +10,50 @@ class HomePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Welcome'),
+        backgroundColor: const Color(0xFF4CBFDA),
+        title: const Text(
+          'ClockEase Dashboard',
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                // Pop all routes and return to login page
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/',
+                  (route) => false,
+                );
+              }
             },
           ),
         ],
       ),
-      body: Center(child: Text('Hello, ${user?.email ?? 'User'}')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.verified_user, size: 80, color: Color(0xFF4CBFDA)),
+            const SizedBox(height: 20),
+            Text(
+              'Welcome, ${user?.email ?? 'User'}!',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'You are now logged in to ClockEase 🎉',
+              style: TextStyle(color: Colors.black54),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
