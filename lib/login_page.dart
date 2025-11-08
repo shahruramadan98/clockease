@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'signup/signup_company_page.dart'; 
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,9 +16,7 @@ class _LoginPageState extends State<LoginPage> {
 
   // 🧠 Firebase login function
   Future<void> _signIn() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -26,9 +25,9 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('✅ Login successful')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Login successful')),
+        );
         Navigator.pushReplacementNamed(context, '/home');
       }
     } on FirebaseAuthException catch (e) {
@@ -41,34 +40,13 @@ class _LoginPageState extends State<LoginPage> {
         message = e.message ?? 'An error occurred.';
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('❌ $message')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('❌ $message')));
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('⚠️ ${e.toString()}')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('⚠️ ${e.toString()}')));
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  // 🧠 Firebase registration (optional)
-  Future<void> _register() async {
-    try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🎉 Registration successful!')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('⚠️ ${e.toString()}')));
+      setState(() => _isLoading = false);
     }
   }
 
@@ -78,32 +56,28 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Top-left blue shape
+          // Top-left blue triangle
           Positioned(
-            top: -60,
-            left: -80,
-            child: Container(
-              height: 250,
-              width: 250,
-              decoration: const BoxDecoration(
-                color: Color(0xFF4CBFDA),
-                borderRadius: BorderRadius.only(
-                  bottomRight: Radius.circular(150),
-                ),
+            top: 0,
+            left: 0,
+            child: CustomPaint(
+              size: const Size(200, 200),
+              painter: TrianglePainter(
+                color: const Color(0xFF4CBFDA),
+                isTopLeft: true,
               ),
             ),
           ),
 
-          // Bottom-right blue shape
+          // Bottom-right blue triangle
           Positioned(
-            bottom: -60,
-            right: -80,
-            child: Container(
-              height: 250,
-              width: 250,
-              decoration: const BoxDecoration(
-                color: Color(0xFF4CBFDA),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(150)),
+            bottom: 0,
+            right: 0,
+            child: CustomPaint(
+              size: const Size(200, 200),
+              painter: TrianglePainter(
+                color: const Color(0xFF4CBFDA),
+                isTopLeft: false,
               ),
             ),
           ),
@@ -121,25 +95,16 @@ class _LoginPageState extends State<LoginPage> {
                       Image.asset('assets/images/logo.png', height: 80),
                       const SizedBox(height: 8),
                       const Text(
-                        'ClockEase',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF3F51B5),
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                      const Text(
                         'Login',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 30,
                           fontWeight: FontWeight.bold,
                           color: Colors.black,
                         ),
                       ),
                       Container(
-                        height: 3,
-                        width: 60,
+                        height: 4,
+                        width: 70,
                         color: Color(0xFF4CBFDA),
                         margin: const EdgeInsets.only(top: 4),
                       ),
@@ -207,6 +172,7 @@ class _LoginPageState extends State<LoginPage> {
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 18,
                               ),
                             ),
                     ),
@@ -214,21 +180,27 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 40),
 
-                  // Register link
+                  // 🔗 Sign Up link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'Not yet register for company? ',
-                        style: TextStyle(color: Colors.black54),
-                      ),
-                      GestureDetector(
-                        onTap: _register,
+                      // const Text(
+                      //   'Not yet registered for company?',
+                      //   style: TextStyle(color: Colors.black54),
+                      // ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SignUpCompanyPage(),
+                            ),
+                          );
+                        },
                         child: const Text(
-                          'Register now',
+                          'Not yet registered for company? Sign Up',
                           style: TextStyle(
                             color: Color(0xFF3F51B5),
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -243,3 +215,35 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
+class TrianglePainter extends CustomPainter {
+  final Color color;
+  final bool isTopLeft;
+
+  TrianglePainter({required this.color, this.isTopLeft = true});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color;
+    final path = Path();
+
+    if (isTopLeft) {
+      // Top-left triangle
+      path.moveTo(0, 0);
+      path.lineTo(size.width, 0);
+      path.lineTo(0, size.height);
+    } else {
+      // Bottom-right triangle
+      path.moveTo(size.width, size.height);
+      path.lineTo(0, size.height);
+      path.lineTo(size.width, 0);
+    }
+
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
