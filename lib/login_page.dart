@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'signup/signup_company_page.dart'; 
+import 'signup/signup_company_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,39 +14,52 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  // 🧠 Firebase login function
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _signIn() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Fill all fields')));
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Login successful')),
-        );
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Login successful')));
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil('/home', (route) => false);
     } on FirebaseAuthException catch (e) {
-      String message;
-      if (e.code == 'user-not-found') {
-        message = 'No user found for that email.';
-      } else if (e.code == 'wrong-password') {
-        message = 'Wrong password. Try again.';
-      } else {
-        message = e.message ?? 'An error occurred.';
-      }
-
+      if (!mounted) return;
+      final message = e.code == 'user-not-found'
+          ? 'No user found'
+          : e.code == 'wrong-password'
+              ? 'Wrong password'
+              : e.message ?? 'Error';
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('❌ $message')));
+          .showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('⚠️ ${e.toString()}')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -56,40 +69,35 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Top-left blue triangle
           Positioned(
             top: 0,
             left: 0,
-            child: CustomPaint(
-              size: const Size(200, 200),
-              painter: TrianglePainter(
+            child: ClipPath(
+              clipper: _TriangleClipper(true),
+              child: Container(
+                height: 200,
+                width: 200,
                 color: const Color(0xFF4CBFDA),
-                isTopLeft: true,
               ),
             ),
           ),
-
-          // Bottom-right blue triangle
           Positioned(
             bottom: 0,
             right: 0,
-            child: CustomPaint(
-              size: const Size(200, 200),
-              painter: TrianglePainter(
+            child: ClipPath(
+              clipper: _TriangleClipper(false),
+              child: Container(
+                height: 200,
+                width: 200,
                 color: const Color(0xFF4CBFDA),
-                isTopLeft: false,
               ),
             ),
           ),
-
-          // Main content
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo + Title
                   Column(
                     children: [
                       Image.asset('assets/images/logo.png', height: 80),
@@ -105,25 +113,21 @@ class _LoginPageState extends State<LoginPage> {
                       Container(
                         height: 4,
                         width: 70,
-                        color: Color(0xFF4CBFDA),
+                        color: const Color(0xFF4CBFDA),
                         margin: const EdgeInsets.only(top: 4),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 40),
-
-                  // Email TextField
                   TextField(
                     controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       hintText: 'Enter Your Email',
                       border: UnderlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Password TextField
                   TextField(
                     controller: _passwordController,
                     obscureText: true,
@@ -132,14 +136,10 @@ class _LoginPageState extends State<LoginPage> {
                       border: UnderlineInputBorder(),
                     ),
                   ),
-
-                  const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        // TODO: implement forgot password
-                      },
+                      onPressed: () {},
                       child: const Text(
                         'Forgot Password?',
                         style: TextStyle(
@@ -149,10 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
-                  // Login button
                   SizedBox(
                     width: double.infinity,
                     height: 48,
@@ -177,34 +174,20 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                     ),
                   ),
-
                   const SizedBox(height: 40),
-
-                  // 🔗 Sign Up link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // const Text(
-                      //   'Not yet registered for company?',
-                      //   style: TextStyle(color: Colors.black54),
-                      // ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SignUpCompanyPage(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Not yet registered for company? Sign Up',
-                          style: TextStyle(
-                            color: Color(0xFF3F51B5),
-                          ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SignUpCompanyPage(),
                         ),
-                      ),
-                    ],
+                      );
+                    },
+                    child: const Text(
+                      'Not yet registered for company? Sign Up',
+                      style: TextStyle(color: Color(0xFF3F51B5)),
+                    ),
                   ),
                 ],
               ),
@@ -216,34 +199,25 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-class TrianglePainter extends CustomPainter {
-  final Color color;
+class _TriangleClipper extends CustomClipper<Path> {
   final bool isTopLeft;
-
-  TrianglePainter({required this.color, this.isTopLeft = true});
+  _TriangleClipper(this.isTopLeft);
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
+  Path getClip(Size size) {
     final path = Path();
-
     if (isTopLeft) {
-      // Top-left triangle
       path.moveTo(0, 0);
       path.lineTo(size.width, 0);
       path.lineTo(0, size.height);
     } else {
-      // Bottom-right triangle
       path.moveTo(size.width, size.height);
-      path.lineTo(0, size.height);
       path.lineTo(size.width, 0);
+      path.lineTo(0, size.height);
     }
-
-    path.close();
-    canvas.drawPath(path, paint);
+    return path;
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
-
