@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'firebase_options.dart';
 import 'login_page.dart';
 import 'home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const MyApp());
+
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
+
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -21,12 +34,13 @@ class MyApp extends StatelessWidget {
       title: 'ClockEase',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const AuthGate(),
-      routes: {'/home': (context) => const HomePage()},
+      routes: {
+        '/home': (_) => const HomePage(),
+      },
     );
   }
 }
 
-/// 🔐 AuthGate — check whether user logged in or not
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -35,19 +49,18 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Waiting for Firebase connection
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
           );
         }
 
-        // If user is logged in → go to HomePage
         if (snapshot.hasData) {
           return const HomePage();
         }
 
-        // If not logged in → go to LoginPage
         return const LoginPage();
       },
     );

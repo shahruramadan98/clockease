@@ -1,29 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../controllers/dashboard_controller.dart';
 import 'widgets/greeting_card.dart';
 import 'widgets/clock_card.dart';
 import 'widgets/quick_action_card.dart';
 
-class Dashboard extends StatelessWidget {
+class Dashboard extends ConsumerWidget {
   final String? userEmail;
-
   const Dashboard({super.key, this.userEmail});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final attendance = ref.watch(dashboardProvider);
+
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               GreetingCard(userEmail: userEmail),
 
               const SizedBox(height: 20),
 
+              // Now ClockCard is connected to Riverpod
               const ClockCard(),
 
               const SizedBox(height: 25),
@@ -41,17 +43,21 @@ class Dashboard extends StatelessWidget {
 
               Row(
                 children: const [
-                  Expanded(child: QuickActionCard(
-                    title: "Today’s Schedule",
-                    subtitle: "Daily Standup: 09:00 AM",
-                    icon: Icons.calendar_month,
-                  )),
+                  Expanded(
+                    child: QuickActionCard(
+                      title: "Today’s Schedule",
+                      subtitle: "Daily Standup: 09:00 AM",
+                      icon: Icons.calendar_month,
+                    ),
+                  ),
                   SizedBox(width: 12),
-                  Expanded(child: QuickActionCard(
-                    title: "Leave Balance",
-                    subtitle: "Annual: 15 days",
-                    icon: Icons.eco,
-                  )),
+                  Expanded(
+                    child: QuickActionCard(
+                      title: "Leave Balance",
+                      subtitle: "Annual: 15 days",
+                      icon: Icons.eco,
+                    ),
+                  ),
                 ],
               ),
 
