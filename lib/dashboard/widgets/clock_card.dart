@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../controllers/dashboard_controller.dart';
+import '../../face_verification/face_verification_page.dart';
 
 class ClockCard extends ConsumerWidget {
   const ClockCard({super.key});
@@ -11,18 +12,36 @@ class ClockCard extends ConsumerWidget {
     final controller = ref.read(dashboardProvider.notifier);
 
     return GestureDetector(
-      onTap: () {
-        controller.toggleClock();
+      onTap: () async {
+        // USER IS CLOCKED IN → ALLOW DIRECT CLOCK OUT
+        if (state.isClockedIn) {
+          controller.toggleClock();
+          return;
+        }
+
+        // USER IS CLOCKED OUT → REQUIRE FACE VERIFICATION
+        final verified = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const FaceVerificationPage(),
+          ),
+        );
+
+        if (verified == true) {
+          controller.toggleClock();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Face verification required")),
+          );
+        }
       },
+
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: const LinearGradient(
-            colors: [
-              Color(0xFF3470D9),
-              Color(0xFF4CBFDA),
-            ],
+            colors: [Color(0xFF3470D9), Color(0xFF4CBFDA)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -31,11 +50,13 @@ class ClockCard extends ConsumerWidget {
               color: Colors.black12,
               blurRadius: 8,
               offset: Offset(0, 2),
-            )
+            ),
           ],
         ),
+
         child: Row(
           children: [
+            // LEFT SIDE
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,7 +71,7 @@ class ClockCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "Last action: ${state.lastAction}",
+                    "Last action: ${state.lastAction ?? '--'}",
                     style: const TextStyle(
                       fontSize: 15,
                       color: Colors.white70,
@@ -69,6 +90,7 @@ class ClockCard extends ConsumerWidget {
               ),
             ),
 
+            // RIGHT SIDE ICON
             Container(
               height: 90,
               width: 90,
