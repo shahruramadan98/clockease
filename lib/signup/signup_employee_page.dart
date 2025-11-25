@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../home_page.dart';
 
 class SignUpEmployeePage extends StatefulWidget {
@@ -32,7 +33,7 @@ class _SignUpEmployeePageState extends State<SignUpEmployeePage> {
           .collection('companies')
           .doc(widget.companyUid)
           .collection('employees')
-          .doc(widget.companyUid) // admin document
+          .doc(FirebaseAuth.instance.currentUser!.uid) // use employee UID
           .set({
         'employeeId': _employeeIdController.text.trim(),
         'fullName': _fullNameController.text.trim(),
