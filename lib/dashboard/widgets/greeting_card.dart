@@ -21,15 +21,23 @@ class GreetingCard extends ConsumerWidget {
     final date =
         "${_weekday(now.weekday)}, ${now.day} ${_month(now.month)}";
 
+    final formattedTime = _formatTime(now); // NEW
+
     return userData.when(
-      loading: () => _buildCard(greeting, "Loading...", date),
-      error: (_, __) => _buildCard(greeting, "User", date),
-      data: (user) => _buildCard(greeting, user?.fullName ?? "User", date),
+      loading: () => _buildCard(greeting, "Loading...", date, formattedTime),
+      error: (_, __) => _buildCard(greeting, "User", date, formattedTime),
+      data: (user) => _buildCard(
+        greeting,
+        user?.fullName ?? "User",
+        date,
+        formattedTime,
+      ),
     );
   }
 }
 
-Widget _buildCard(String greeting, String name, String date) {
+// UPDATED to include time
+Widget _buildCard(String greeting, String name, String date, String time) {
   return Container(
     padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
@@ -55,9 +63,17 @@ Widget _buildCard(String greeting, String name, String date) {
                 ),
               ),
               const SizedBox(height: 8),
+
+              // DATE
               Text(
                 date,
                 style: const TextStyle(fontSize: 14, color: Colors.white),
+              ),
+
+              // TIME
+              Text(
+                time,
+                style: const TextStyle(fontSize: 14, color: Colors.white70),
               ),
             ],
           ),
@@ -104,4 +120,12 @@ String _month(int month) {
     "July","August","September","October","November","December"
   ];
   return names[month - 1];
+}
+
+// NEW TIME FORMAT FUNCTION
+String _formatTime(DateTime time) {
+  final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+  final minute = time.minute.toString().padLeft(2, '0');
+  final suffix = time.hour >= 12 ? "PM" : "AM";
+  return "$hour:$minute $suffix";
 }
