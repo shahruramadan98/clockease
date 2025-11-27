@@ -1,37 +1,98 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/attendance_model.dart';
+import '../models/dashboard_attendance_state.dart';
+import '../models/attendance_record.dart';
+import '../models/attendance_status.dart';
 import '../services/firestore_service.dart';
 
-class DashboardController extends StateNotifier<AttendanceState> {
-  DashboardController() : super(AttendanceState.initial()) {
+class DashboardController extends StateNotifier<DashboardAttendanceState> {
+  DashboardController() : super(DashboardAttendanceState.initial()) {
     loadToday();
   }
 
   final _service = FirestoreService();
 
-  /// Load today's attendance record from Firestore
   Future<void> loadToday() async {
     final record = await _service.getTodayAttendance();
     if (record != null) {
-      state = record; // update UI
+      state = record;
     }
   }
 
-  /// Handle clock in / clock out
   Future<void> toggleClock() async {
-    final now = _formatTime(DateTime.now());
+    final now = DateTime.now();
 
-    final updated = state.copyWith(
-      isClockedIn: !state.isClockedIn,
-      lastAction: now,
-    );
+    // CLOCK IN ------------------------------------------------------
+    if (!state.isClockedIn) {
+      final updated = state.copyWith(
+        isClockedIn: true,
+        lastAction: _formatTime(now),
+      );
 
-    state = updated; // update UI immediately
+      state = updated;
+      await _service.updateDashboardAttendance(updated);
 
-    await _service.updateAttendance(updated); // update Firestore
+      // Shift rules
+      final shiftStart = DateTime(now.year, now.month, now.day, 8, 0);
+      final lunchTime = DateTime(now.year, now.month, now.day, 12, 0);
+      final shiftEnd = DateTime(now.year, now.month, now.day, 17, 0);
+
+      AttendanceStatus status = AttendanceStatus.onTime;
+      Duration lateDuration = Duration.zero;
+
+      if (now.isAfter(shiftStart) && now.isBefore(lunchTime)) {
+        status = AttendanceStatus.late;
+        lateDuration = now.difference(shiftStart);
+      } else if (now.isAfter(lunchTime) && now.isBefore(shiftEnd)) {
+        status = AttendanceStatus.halfDay;
+      } else if (now.isAfter(shiftEnd)) {
+        status = AttendanceStatus.absent;
+      }
+
+      final rec = AttendanceRecord(
+        date: DateTime(now.year, now.month, now.day),
+        clockIn: now,
+        clockOut: null,
+        totalHours: Duration.zero,
+        lateDuration: lateDuration,
+        status: status,
+      );
+
+      await _service.saveAttendanceRecord(rec);
+      return;
+    }
+
+    // CLOCK OUT ------------------------------------------------------
+    if (state.isClockedIn) {
+      final updated = state.copyWith(
+        isClockedIn: false,
+        lastAction: _formatTime(now),
+      );
+
+      state = updated;
+      await _service.updateDashboardAttendance(updated);
+
+      final today =
+          await _service.getAttendanceRecordForDate(DateTime.now());
+      if (today == null) return;
+
+      final totalMinutes = now.difference(today.clockIn!).inMinutes;
+
+      const breakMinutes = 60;
+      final workMinutes = totalMinutes - breakMinutes;
+
+      final rec = AttendanceRecord(
+        date: today.date,
+        clockIn: today.clockIn,
+        clockOut: now,
+        totalHours: Duration(minutes: workMinutes),
+        lateDuration: today.lateDuration,
+        status: today.status, // KEEP ORIGINAL STATUS
+      );
+
+      await _service.saveAttendanceRecord(rec);
+    }
   }
 
-  /// Format time like 08:45 AM
   String _formatTime(DateTime time) {
     final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
     final minute = time.minute.toString().padLeft(2, '0');
@@ -40,8 +101,7 @@ class DashboardController extends StateNotifier<AttendanceState> {
   }
 }
 
-/// Riverpod provider for Dashboard
 final dashboardProvider =
-    StateNotifierProvider<DashboardController, AttendanceState>(
+    StateNotifierProvider<DashboardController, DashboardAttendanceState>(
   (ref) => DashboardController(),
 );
