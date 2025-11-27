@@ -32,15 +32,7 @@ class AttendancePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF4CBFDA),
-        elevation: 0,
-        title: const Text(
-          "ClockEase",
-          style: TextStyle(color: Colors.white),
-        ),
-        centerTitle: true,
-      ),
+      
 
       body: attendanceState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
