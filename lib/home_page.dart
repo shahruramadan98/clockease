@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dashboard/dashboard.dart';
 import 'services/user_service.dart';
 import 'attendance/attendance_page.dart';
+import 'leave/leave_home_page.dart';
+
 
 
 class HomePage extends StatefulWidget {
@@ -40,8 +42,8 @@ class _HomePageState extends State<HomePage> {
     }
 
     final screens = [
-      const AttendancePage(),
-      const Center(child: Text("Leave Application Page")),
+       AttendancePage(),
+       LeaveHomePage(),
       const Dashboard(), 
       const Center(child: Text("Insights Page")),
       const Center(child: Text("Profile Page")),
