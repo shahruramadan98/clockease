@@ -416,7 +416,8 @@ class LeaveApplicationForm extends StatefulWidget {
 }
 
 class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
-  String? selectedLeaveType = 'Annual'; // Default leave type
+  // Initialize the variables
+  String? selectedLeaveType; // Default leave type is null, allowing the dropdown to be empty
   DateTime? startDate;
   DateTime? endDate;
 
@@ -437,10 +438,10 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
               "Leave Type",
               style: TextStyle(fontSize: 18),
             ),
-            // Dropdown for Leave Type
             DropdownButton<String>(
               isExpanded: true,
               value: selectedLeaveType,
+              hint: Text("Select Leave Type"), // Display this hint when no leave type is selected
               items: <String>['Annual', 'Sick', 'Emergency']
                   .map((e) => DropdownMenuItem<String>(value: e, child: Text(e)))
                   .toList(),
@@ -455,7 +456,6 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
               "Start Date",
               style: TextStyle(fontSize: 18),
             ),
-            // TextField for Start Date with Date Picker
             TextField(
               controller: startDateController,
               readOnly: true,
@@ -473,7 +473,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                 if (selectedDate != null) {
                   setState(() {
                     startDate = selectedDate;
-                    startDateController.text = '${selectedDate.toLocal()}'.split(' ')[0]; // Format date as YYYY-MM-DD
+                    startDateController.text = '${selectedDate.toLocal()}'.split(' ')[0];
                   });
                 }
               },
@@ -483,7 +483,6 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
               "End Date",
               style: TextStyle(fontSize: 18),
             ),
-            // TextField for End Date with Date Picker
             TextField(
               controller: endDateController,
               readOnly: true,
@@ -492,26 +491,30 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                 suffixIcon: Icon(Icons.calendar_today),
               ),
               onTap: () async {
+                // Ensure end date is after the start date
                 DateTime? selectedDate = await showDatePicker(
                   context: context,
-                  initialDate: endDate ?? DateTime.now(),
-                  firstDate: DateTime(2020),
+                  initialDate: endDate ?? startDate ?? DateTime.now(),
+                  firstDate: startDate ?? DateTime.now(), // Start date as the minimum limit
                   lastDate: DateTime(2101),
                 );
-                if (selectedDate != null) {
+                if (selectedDate != null && selectedDate.isAfter(startDate ?? DateTime.now())) {
                   setState(() {
                     endDate = selectedDate;
-                    endDateController.text = '${selectedDate.toLocal()}'.split(' ')[0]; // Format date as YYYY-MM-DD
+                    endDateController.text = '${selectedDate.toLocal()}'.split(' ')[0];
                   });
+                } else {
+                  // Show a message if end date is before start date
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('End Date must be after Start Date')),
+                  );
                 }
               },
             ),
             const SizedBox(height: 20),
-            // Submit Button
             ElevatedButton(
               onPressed: () {
-                // Submit leave request
-                // Handle the submit action here, e.g., save the form data
+                // Handle the submit action here
               },
               child: const Text("Submit Leave Request"),
             ),
