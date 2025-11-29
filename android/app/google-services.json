@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "60493495817",
+    "project_id": "clockease-e1a29",
+    "storage_bucket": "clockease-e1a29.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:60493495817:android:c785cda38fdc773d4f82d8",
+        "android_client_info": {
+          "package_name": "com.example.clockease"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "60493495817-ejfl8i6bknoe6qkvkq7nnotfs121vcqn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLYcZ6Lh7RAS0-JSdwwBJRyQlKwVjNYdA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "60493495817-ejfl8i6bknoe6qkvkq7nnotfs121vcqn.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "60493495817-0nu8q5tmphjh4s863l2pp2ia9052f9gu.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.clockease"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

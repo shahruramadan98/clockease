@@ -1,0 +1,101 @@
+[33mcommit 85a0f0583f5aa55d0596e9caf8f61a2b07018a9e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m, [m[1;31morigin/dev[m[33m)[m
+Author: Ridhuan <ridhuansazali20@gmail.com>
+Date:   Sat Nov 29 08:23:08 2025 +0800
+
+    Fix line endings
+
+[33mcommit f1864aa66a765bf9b8a23574fa0c28e9a63c29bd[m
+Author: Farisha Fadzly <sp-norfarishahidayu.f@graduate.utm.my>
+Date:   Fri Nov 28 10:44:18 2025 +0800
+
+    setup leave application UI + leave application form
+
+[33mcommit 2fd36bf832be3ca7422f4f439f1e0c073448f4bc[m
+Author: Farisha Fadzly <sp-norfarishahidayu.f@graduate.utm.my>
+Date:   Thu Nov 27 22:58:02 2025 +0800
+
+    update ui attendance
+
+[33mcommit ea752c6a90f953030d2c8def9853564b766d0c85[m
+Author: Farisha Fadzly <sp-norfarishahidayu.f@graduate.utm.my>
+Date:   Thu Nov 27 22:40:45 2025 +0800
+
+    Add attendance page UI + monthly summary
+
+[33mcommit 8b9a56a71756933d72fa8d562cc14e3c8c20cc04[m
+Author: Farisha Fadzly <sp-norfarishahidayu.f@graduate.utm.my>
+Date:   Wed Nov 26 23:03:31 2025 +0800
+
+    added time on greeting component
+
+[33mcommit 984c262e52add7f38b61395d84286917ef6ae382[m
+Author: Farisha Fadzly <sp-norfarishahidayu.f@graduate.utm.my>
+Date:   Tue Nov 25 12:22:45 2025 +0800
+
+    Implement userProvider + GreetingCard name, fix dashboard
+
+[33mcommit f566ac5a6a089f3994ad6f60467884a6afa4f1c7[m
+Author: Farisha Fadzly <sp-norfarishahidayu.f@graduate.utm.my>
+Date:   Mon Nov 24 23:36:36 2025 +0800
+
+    setup face verification
+
+[33mcommit 26ce77a0c961fc814f57e0c46d78d1c5e30d97b0[m
+Author: Farisha Fadzly <sp-norfarishahidayu.f@graduate.utm.my>
+Date:   Fri Nov 21 15:03:38 2025 +0800
+
+    adding logic function
+
+[33mcommit bac8b63922a36bfe1867a6eccbafe10fbe9047aa[m
+Author: Farisha Fadzly <sp-norfarishahidayu.f@graduate.utm.my>
+Date:   Thu Nov 20 13:38:23 2025 +0800
+
+    Dashboard structure setup and initial widget files
+
+[33mcommit a269da86c72c98dc6c68655f7c7baee6eaa44ec4[m
+Author: nurizzatie <nurizzati.jsl@gmail.com>
+Date:   Sat Nov 8 23:19:18 2025 +0800
+
+    Update dependencies and configs
+
+[33mcommit bfbab7b22ac636b95596bdab24a182f92770921f[m
+Author: nurizzatie <nurizzati.jsl@gmail.com>
+Date:   Sat Nov 8 23:13:29 2025 +0800
+
+    Adjust background layout
+
+[33mcommit d3d963db75006029bb60efd34f8407b39859434c[m
+Author: nurizzatie <nurizzati.jsl@gmail.com>
+Date:   Sat Nov 8 23:13:06 2025 +0800
+
+    Create UI and integrate auth logic for sign up
+
+[33mcommit ccf67a314c856ff3d3788196d63a8ba6449445e4[m
+Author: shahruramadan98 <shahruramadan98@gmail.com>
+Date:   Sat Nov 8 16:01:07 2025 +0800
+
+    Firestore db creation and implementation
+
+[33mcommit 2a3b8b86d3435b3bff7e3a057881fbdc7178dde8[m
+Author: Farisha Fadzly <sp-norfarishahidayu.f@graduate.utm.my>
+Date:   Sat Nov 8 00:53:58 2025 +0800
+
+    design login page UI
+
+[33mcommit ecfdaef6444af1418babcee06c8e810f6f8200b5[m
+Author: shahruramadan98 <shahruramadan98@gmail.com>
+Date:   Fri Nov 7 21:28:04 2025 +0800
+
+    minor update on the main.dart
+
+[33mcommit 3aa18e153cdacbeb0e92979e25341840bb5ce6c8[m
+Author: shahruramadan98 <shahruramadan98@gmail.com>
+Date:   Fri Nov 7 20:56:57 2025 +0800
+
+    Integrate Firebase Auth, Config, Flutter Connection
+
+[33mcommit 42200b5e3252157c308dcdebefecd4403373fa40[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Author: shahruramadan98 <shahruramadan98@gmail.com>
+Date:   Thu Nov 6 21:30:29 2025 +0800
+
+    initial clockease project setup
