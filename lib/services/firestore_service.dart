@@ -18,6 +18,21 @@ class FirestoreService {
   }
 
   // --- HISTORY LIST ---
+  // --- HISTORY LIST ---
+  Stream<List<AttendanceRecord>> getAttendanceStream() {
+    if (_user == null) return Stream.value([]);
+
+    return _db
+        .collection('users')
+        .doc(_user.uid)
+        .collection('attendance')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => AttendanceRecord.fromMap(doc.data()))
+            .toList());
+  }
+
   Future<List<AttendanceRecord>> fetchAttendanceList() async {
     if (_user == null) return [];
 

@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:camera/camera.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:clockease/services/user_service.dart'; // Import your user service
-import 'package:clockease/utils/date_formatter.dart';  // Import the formatClockIn function
+import 'package:clockease/controllers/attendance_controller.dart';
+import 'package:clockease/utils/date_formatter.dart';
+import 'package:intl/intl.dart';
 
-class AttendancePage extends StatefulWidget {
+class AttendancePage extends ConsumerStatefulWidget {
   const AttendancePage({super.key});
 
   @override
-  State<AttendancePage> createState() => _AttendancePageState();
+  ConsumerState<AttendancePage> createState() => _AttendancePageState();
 }
 
-class _AttendancePageState extends State<AttendancePage> {
+class _AttendancePageState extends ConsumerState<AttendancePage> {
   CameraController? cameraController;
   bool isLogging = false;
+
   final FaceDetector faceDetector = FaceDetector(
     options: FaceDetectorOptions(
       enableContours: false,
@@ -23,8 +24,6 @@ class _AttendancePageState extends State<AttendancePage> {
       performanceMode: FaceDetectorMode.fast,
     ),
   );
-
-  late Timestamp clockInTimestamp;  // Store clock-in timestamp from Firestore
 
   @override
   void initState() {
@@ -41,12 +40,13 @@ class _AttendancePageState extends State<AttendancePage> {
         enableAudio: false,
       );
       await cameraController!.initialize();
-      setState(() {});
+      if (mounted) setState(() {});
     }
   }
 
   Future<void> logAttendance() async {
-    if (cameraController == null || !cameraController!.value.isInitialized) return;
+    if (cameraController == null || !cameraController!.value.isInitialized)
+      return;
 
     setState(() {
       isLogging = true;
@@ -66,65 +66,22 @@ class _AttendancePageState extends State<AttendancePage> {
         return;
       }
 
-      // 3️⃣ Get user info from UserService
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        showMessage("User not logged in!");
-        setState(() => isLogging = false);
-        return;
-      }
-
-      // Retrieve user profile details
-      final userProfile = await UserService().getEmployeeProfile();
-      if (userProfile == null) {
-        showMessage("User profile not found!");
-        setState(() => isLogging = false);
-        return;
-      }
-
-      final fullName = userProfile["fullName"];
-      final email = userProfile["email"];
-
-      // 4️⃣ Check if attendance already logged today
-      final today = DateTime.now();
-      final startOfDay = DateTime(today.year, today.month, today.day);
-
-      final query = await FirebaseFirestore.instance
-          .collection('attendance')
-          .where('userId', isEqualTo: user.uid)
-          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .get();
-
-      if (query.docs.isNotEmpty) {
-        showMessage("You already logged attendance today!");
-        setState(() => isLogging = false);
-        return;
-      }
-
-      // 5️⃣ Log attendance to Firestore
-      await FirebaseFirestore.instance.collection('attendance').add({
-        'userId': user.uid,
-        'fullName': fullName,
-        'email': email,
-        'timestamp': Timestamp.now(),
-        'status': 'Present', // Attendance status
-      });
-
-      // Fetch the `clockIn` timestamp after logging attendance
-      clockInTimestamp = Timestamp.now();
-
-      showMessage("Attendance logged successfully!");
+      // 3️⃣ Log attendance via Controller
+      final result = await ref.read(attendanceProvider.notifier).logAttendance();
+      showMessage(result['message']);
     } catch (e) {
-      print("Error: $e");
-      showMessage("Error logging attendance");
+      showMessage("Error: $e");
     }
 
-    setState(() {
-      isLogging = false;
-    });
+    if (mounted) {
+      setState(() {
+        isLogging = false;
+      });
+    }
   }
 
   void showMessage(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg)),
     );
@@ -139,16 +96,50 @@ class _AttendancePageState extends State<AttendancePage> {
 
   @override
   Widget build(BuildContext context) {
+    final attendanceState = ref.watch(attendanceProvider);
+
+    // Find today's clock-in time
+    String formattedClockIn = '';
+    attendanceState.whenData((records) {
+      final now = DateTime.now();
+      final todayRecord = records.firstWhere(
+        (r) =>
+            r.date.year == now.year &&
+            r.date.month == now.month &&
+            r.date.day == now.day,
+        orElse: () => throw Exception('No record'), // Handle gracefully below
+      );
+      // We rely on the catch block/orElse? No, let's do safe check.
+    });
+    
+    // Better way to find safe record
+    if (attendanceState.hasValue) {
+        final records = attendanceState.value!;
+        final now = DateTime.now();
+         try {
+           final todayRecord = records.firstWhere(
+            (r) =>
+                r.date.year == now.year &&
+                r.date.month == now.month &&
+                r.date.day == now.day
+          );
+           if (todayRecord.clockIn != null) {
+             // Assuming formatClockIn is the util function we imported. 
+             // If not available, we use DateFormat directly.
+             // The previous code used 'package:clockease/utils/date_formatter.dart';
+             // I included the import.
+             formattedClockIn = formatClockIn(todayRecord.clockIn!);
+           }
+         } catch (e) {
+           // No record for today
+         }
+    }
+
+
     if (cameraController == null || !cameraController!.value.isInitialized) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
-    }
-
-    // Format the clockIn timestamp to a user-friendly string if it's set
-    String formattedClockIn = '';
-    if (clockInTimestamp != null) {
-      formattedClockIn = formatClockIn(clockInTimestamp);
     }
 
     return Scaffold(
@@ -166,7 +157,7 @@ class _AttendancePageState extends State<AttendancePage> {
           ),
           if (formattedClockIn.isNotEmpty) ...[
             const SizedBox(height: 20),
-            Text('Clock-in time: $formattedClockIn'),  // Display formatted clockIn time
+            Text('Clock-in time: $formattedClockIn'),
           ],
         ],
       ),

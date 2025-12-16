@@ -21,7 +21,7 @@ class GreetingCard extends ConsumerWidget {
     final date =
         "${_weekday(now.weekday)}, ${now.day} ${_month(now.month)}";
 
-    final formattedTime = _formatTime(now); // NEW
+    final formattedTime = _formatTime(now); 
 
     return userData.when(
       loading: () => _buildCard(greeting, "Loading...", date, formattedTime),

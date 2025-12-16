@@ -28,7 +28,7 @@ class AttendancePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final attendanceState = ref.watch(attendanceProvider);
+    final attendanceState = ref.watch(attendanceListProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -154,17 +154,17 @@ class AttendancePage extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final r = records[index];
 
-                    return AttendanceCard(
-                      date: r.dateString,
-                      shift: "8AM - 5PM",
-                      breakTime: "1h",
-                      totalHours: _formatDuration(r.totalHours),
-                      lastAction: r.clockOut != null
-                          ? _formatTime(r.clockOut!)
-                          : "--",
-                      status: r.status,
-                      lateDuration: r.lateDuration,
-                    );
+                      return AttendanceCard(
+                        date: r.dateString,
+                        shift: "8AM - 5PM",
+                        breakTime: "1h",
+                        totalHours: r.formattedTotalHours,
+                        lastAction: r.clockOut != null
+                            ? _formatTime(r.clockOut!)
+                            : "--",
+                        status: r.status,
+                        lateDuration: r.formattedLateDuration,
+                      );
                   },
                 ),
               ],

@@ -8,7 +8,7 @@ class AttendanceCard extends StatelessWidget {
   final String totalHours;
   final String lastAction;
   final AttendanceStatus status;
-  final Duration lateDuration;
+  final String lateDuration;
 
   const AttendanceCard({
     super.key,
@@ -34,7 +34,7 @@ class AttendanceCard extends StatelessWidget {
         break;
 
       case AttendanceStatus.late:
-        badgeText = "Late ${lateDuration.inMinutes} mins";
+        badgeText = "Late $lateDuration";
         badgeColor = Colors.red;
         break;
 

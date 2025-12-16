@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'attendance_status.dart';
 
 class AttendanceRecord {
@@ -25,25 +26,22 @@ class AttendanceRecord {
   String get breakTime => "1h";
 
   factory AttendanceRecord.fromMap(Map<String, dynamic> map) {
+    DateTime parseDate(dynamic val) {
+      if (val is Timestamp) return val.toDate();
+      if (val is String) return DateTime.parse(val);
+      return DateTime.now(); // Fallback
+    }
+
     return AttendanceRecord(
-      date: DateTime.parse(map['date']),
-
-      clockIn: map['clockIn'] != null
-          ? DateTime.parse(map['clockIn'])
-          : null,
-
-      clockOut: map['clockOut'] != null
-          ? DateTime.parse(map['clockOut'])
-          : null,
-
+      date: parseDate(map['date']),
+      clockIn: map['clockIn'] != null ? parseDate(map['clockIn']) : null,
+      clockOut: map['clockOut'] != null ? parseDate(map['clockOut']) : null,
       totalHours: Duration(
         minutes: map['totalMinutes'] is int ? map['totalMinutes'] : 0,
       ),
-
       lateDuration: Duration(
         minutes: map['lateMinutes'] is int ? map['lateMinutes'] : 0,
       ),
-
       status: _safeStatus(map['status']),
     );
   }
@@ -64,5 +62,21 @@ class AttendanceRecord {
       return AttendanceStatus.values[raw];
     }
     return AttendanceStatus.onTime; // default fallback
+  }
+
+  String get formattedLateDuration => _formatDuration(lateDuration);
+  String get formattedTotalHours => _formatDuration(totalHours);
+
+  String _formatDuration(Duration d) {
+    if (d.inMinutes == 0) return "0 mins";
+    
+    final hours = d.inHours;
+    final minutes = d.inMinutes.remainder(60);
+
+    if (hours > 0) {
+      return minutes == 0 ? "${hours}h" : "${hours}h ${minutes}m";
+    } else {
+      return "${minutes}m";
+    }
   }
 }
