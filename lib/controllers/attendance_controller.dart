@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/attendance_record.dart';
+import '../models/attendance_status.dart';
 import '../services/firestore_service.dart';
 
 // =====================================================
-// PROVIDER: REALTIME ATTENDANCE LIST
+// REALTIME ATTENDANCE LIST (MATCHES FirestoreService)
 // =====================================================
 final attendanceProvider =
     StreamProvider<List<AttendanceRecord>>((ref) {
@@ -27,20 +28,17 @@ class AttendanceController {
 
   AttendanceController(this.ref);
 
-  /// Toggle attendance:
-  /// - If no record today → clock in
-  /// - If clocked in → clock out
-  /// - If already completed → do nothing
-  Future<Map<String, dynamic>> toggleAttendance() async {
+  /// Handles both Clock In and Clock Out
+  Future<Map<String, dynamic>> logAttendance() async {
     final service = ref.read(firestoreServiceProvider);
     final now = DateTime.now();
 
     try {
       final todayRecord = await service.getTodayRecord();
 
-      // ======================
+      // =========================
       // CLOCK IN
-      // ======================
+      // =========================
       if (todayRecord == null) {
         final record = AttendanceRecord(
           date: now,
@@ -56,32 +54,34 @@ class AttendanceController {
         return {
           "success": true,
           "type": "checkIn",
+          "message": "Clocked in successfully",
         };
       }
 
-      // ======================
+      // =========================
       // CLOCK OUT
-      // ======================
+      // =========================
       if (todayRecord.clockOut == null &&
           todayRecord.clockIn != null) {
         final workedDuration = now.difference(todayRecord.clockIn!);
 
-        final updated = todayRecord.copyWith(
+        final updatedRecord = todayRecord.copyWith(
           clockOut: now,
           totalHours: workedDuration,
         );
 
-        await service.saveRecord(updated);
+        await service.saveRecord(updatedRecord);
 
         return {
           "success": true,
           "type": "checkOut",
+          "message": "Clocked out successfully",
         };
       }
 
-      // ======================
+      // =========================
       // ALREADY COMPLETED
-      // ======================
+      // =========================
       return {
         "success": false,
         "message": "Attendance already completed for today",
