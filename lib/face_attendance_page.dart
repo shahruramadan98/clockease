@@ -119,8 +119,7 @@ if (query.docs.isNotEmpty) {
   "status": "onTime",
 }, SetOptions(merge: true));
 
-
-      clockInTime = DateTime.now();
+clockInTime = now;
 
 
       showMessage("Attendance logged successfully!");

@@ -158,16 +158,15 @@ class AttendancePage extends ConsumerWidget {
                     final r = records[index];
 
                       return AttendanceCard(
-                        date: r.dateString,
-                        shift: "8AM - 5PM",
-                        breakTime: "1h",
-                        totalHours: r.formattedTotalHours,
-                        lastAction: r.clockOut != null
-                            ? _formatTime(r.clockOut!)
-                            : "--",
-                        status: r.status,
-                        lateDuration: r.formattedLateDuration,
-                      );
+  date: r.dateString,
+  shift: "8AM - 5PM",
+  breakTime: "1h",
+  totalHours: r.formattedTotalHours,
+  clockIn: r.clockIn != null ? _formatTime(r.clockIn!) : "--",
+  clockOut: r.clockOut != null ? _formatTime(r.clockOut!) : "--",
+  status: r.status,
+  lateDuration: r.formattedLateDuration,
+);
                   },
                 ),
               ],

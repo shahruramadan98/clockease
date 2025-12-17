@@ -6,7 +6,10 @@ class AttendanceCard extends StatelessWidget {
   final String shift;
   final String breakTime;
   final String totalHours;
-  final String lastAction;
+ 
+  final String clockIn;
+  final String clockOut;
+
   final AttendanceStatus status;
   final String lateDuration;
 
@@ -16,33 +19,33 @@ class AttendanceCard extends StatelessWidget {
     required this.shift,
     required this.breakTime,
     required this.totalHours,
-    required this.lastAction,
+    required this.clockIn,
+    required this.clockOut,
     required this.status,
     required this.lateDuration,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Status badge UI
-    String badgeText = "";
-    Color badgeColor = Colors.green;
+    // ======================
+    // STATUS BADGE
+    // ======================
+    String badgeText;
+    Color badgeColor;
 
     switch (status) {
       case AttendanceStatus.onTime:
         badgeText = "On Time";
         badgeColor = Colors.green;
         break;
-
       case AttendanceStatus.late:
         badgeText = "Late $lateDuration";
         badgeColor = Colors.red;
         break;
-
       case AttendanceStatus.halfDay:
         badgeText = "Half Day";
         badgeColor = Colors.orange;
         break;
-
       case AttendanceStatus.absent:
         badgeText = "Absent";
         badgeColor = Colors.black87;
@@ -74,33 +77,40 @@ class AttendanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // TOP ROW: Last out & badge
+          // ======================
+          // TOP ROW (CLOCK + STATUS)
+          // ======================
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                "Last Out: $lastAction",
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.white,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Clock In: $clockIn",
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Clock Out: $clockOut",
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
               ),
 
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: badgeColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   badgeText,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
@@ -109,18 +119,22 @@ class AttendanceCard extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // Date
+          // ======================
+          // DATE
+          // ======================
           Text(
             "Date: $date",
             style: const TextStyle(
               fontSize: 14,
-              color: Colors.white,
+              color: Colors.white70,
             ),
           ),
 
           const SizedBox(height: 6),
 
-          // Shift display
+          // ======================
+          // SHIFT
+          // ======================
           Text(
             shift,
             style: const TextStyle(
@@ -132,7 +146,9 @@ class AttendanceCard extends StatelessWidget {
 
           const SizedBox(height: 8),
 
-          // Additional details
+          // ======================
+          // DETAILS
+          // ======================
           Text(
             "Break Time: $breakTime",
             style: const TextStyle(
@@ -140,7 +156,6 @@ class AttendanceCard extends StatelessWidget {
               color: Colors.white70,
             ),
           ),
-
           Text(
             "Total: $totalHours",
             style: const TextStyle(
