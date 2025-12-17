@@ -8,7 +8,7 @@ class ClockCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(dashboardProvider);
+    final state = ref.watch(dashboardProvider);  // Watch the dashboard state
     final controller = ref.read(dashboardProvider.notifier);
 
     final isClockedIn = state.isClockedIn;
@@ -19,7 +19,7 @@ class ClockCard extends ConsumerWidget {
         // USER ALREADY CLOCKED IN → CLOCK OUT DIRECTLY
         // -----------------------------------------------------
         if (isClockedIn) {
-          controller.toggleClock();
+          await controller.toggleClock();  // Ensure state is updated after clocking out
           return;
         }
 
@@ -34,7 +34,7 @@ class ClockCard extends ConsumerWidget {
         );
 
         if (verified == true) {
-          controller.toggleClock();
+          await controller.toggleClock();  // Clock in if verification is successful
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Face verification required")),
@@ -51,7 +51,7 @@ class ClockCard extends ConsumerWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black12,
               blurRadius: 8,
@@ -59,7 +59,6 @@ class ClockCard extends ConsumerWidget {
             ),
           ],
         ),
-
         child: Row(
           children: [
             // LEFT SIDE
