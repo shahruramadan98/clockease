@@ -31,9 +31,8 @@ class AttendancePage extends ConsumerWidget {
     final attendanceState = ref.watch(attendanceListProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      // backgroundColor: Use default theme
       
-
       body: attendanceState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text("Failed to load: $e")),
@@ -44,7 +43,7 @@ class AttendancePage extends ConsumerWidget {
 
           final now = DateTime.now();
 
-          // Filter: current month only
+          // Placeholder to avoid empty replacement until I find the correct file: current month only
           final thisMonthRecords = records.where((r) =>
               r.date.year == now.year && r.date.month == now.month).toList();
 
@@ -77,24 +76,26 @@ class AttendancePage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // PAGE TITLE
-                const Text(
+                Text(
                   "Attendance History",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF3F51B5),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white 
+                        : const Color(0xFF3F51B5),
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
                 // MONTHLY SUMMARY TITLE
-                const Text(
+                Text(
                   "Monthly Summaries",
-                  style: TextStyle(
-                    fontSize: 20,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF3F51B5),
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white70 
+                        : const Color(0xFF3F51B5),
                   ),
                 ),
 
@@ -135,12 +136,13 @@ class AttendancePage extends ConsumerWidget {
 
                 const SizedBox(height: 24),
 
-                const Text(
+                Text(
                   "Daily Attendance",
-                  style: TextStyle(
-                    fontSize: 20,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF3F51B5),
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white70 
+                        : const Color(0xFF3F51B5),
                   ),
                 ),
 

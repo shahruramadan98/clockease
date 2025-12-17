@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dashboard/dashboard.dart';
 import 'services/user_service.dart';
 import 'attendance/attendance_page.dart';
-import 'leave/leave_home_page.dart';  // This should be 'leave/leave_page.dart' if you're using LeavePage
+import 'leave/leave_home_page.dart';
+import 'profile/profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,11 +25,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> loadUser() async {
-    final data = await UserService().getEmployeeProfile();
-    setState(() {
-      fullName = data?["fullName"] ?? "User";
-      loading = false;
-    });
+    final userProfile = await UserService().getEmployeeProfile();
+    if (mounted) {
+      setState(() {
+        fullName = userProfile?.fullName ?? "User";
+        loading = false;
+      });
+    }
   }
 
   @override
@@ -41,10 +44,10 @@ class _HomePageState extends State<HomePage> {
 
     final screens = [
       AttendancePage(),
-      LeavePage(),  // Replace LeaveHomePage() with LeavePage()
+      LeavePage(),
       const Dashboard(),
       const Center(child: Text("Insights Page")),
-      const Center(child: Text("Profile Page")),
+      const ProfilePage(),
     ];
 
     return Scaffold(

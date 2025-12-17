@@ -16,7 +16,7 @@ class Dashboard extends ConsumerWidget {
     final attendance = ref.watch(dashboardProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      // backgroundColor: Use default theme background
       body: SafeArea(
         child: user.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -35,12 +35,10 @@ class Dashboard extends ConsumerWidget {
 
                   const SizedBox(height: 25),
 
-                  const Text(
+                  Text(
                     "Quick Actions",
-                    style: TextStyle(
-                      fontSize: 20,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
                     ),
                   ),
 

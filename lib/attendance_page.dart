@@ -44,10 +44,13 @@ class _AttendancePageState extends ConsumerState<AttendancePage> {
     }
   }
 
-  Future<void> logAttendance() async {
-    if (cameraController == null || !cameraController!.value.isInitialized)
+  Future<void> handleAttendanceAction() async {
+    if (cameraController == null || !cameraController!.value.isInitialized) {
+      showErrorDialog("Camera not ready. Please restart the app or check camera permissions.");
       return;
+    }
 
+    print("DEBUG: handleAttendanceAction called");
     setState(() {
       isLogging = true;
     });
@@ -59,18 +62,115 @@ class _AttendancePageState extends ConsumerState<AttendancePage> {
       // 2️⃣ Detect face
       final inputImage = InputImage.fromFilePath(file.path);
       final faces = await faceDetector.processImage(inputImage);
+      print("DEBUG: Detected ${faces.length} faces");
 
       if (faces.isEmpty) {
-        showMessage("Face not detected!");
+        showErrorDialog("Face not detected! Please ensure your face is clearly visible.");
         setState(() => isLogging = false);
         return;
       }
 
-      // 3️⃣ Log attendance via Controller
-      final result = await ref.read(attendanceProvider.notifier).logAttendance();
-      showMessage(result['message']);
+      // 3️⃣ Determine Action
+      final controller = ref.read(attendanceControllerProvider);
+      print("DEBUG: Calling getNextAction...");
+      final action = await controller.getNextAction().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw Exception("Network timeout. Please check your internet connection.");
+        },
+      );
+      print("DEBUG: Determined action: $action");
+
+      if (action == AttendanceAction.alreadyCompleted) {
+        showMessage("You have already completed attendance for today.");
+        setState(() => isLogging = false);
+        return;
+      }
+
+      if (action == AttendanceAction.earlyCheckOut) {
+        // Confirm Early Checkout
+        if (!mounted) return;
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text("Early clock out"),
+            content: const Text(
+                "You are clocking out before completing your scheduled working hours\n\nThis may affect your attendance record"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text("Clock out anyway"),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm != true) {
+          setState(() => isLogging = false);
+          return;
+        }
+      } else if (action == AttendanceAction.checkOut) {
+        // Confirm Normal Checkout
+        if (!mounted) return;
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text("Confirm clock out"),
+            content: const Text(
+                "Are you sure you want to clock out?\nThis will end your current work session"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text("Clock out"),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm != true) {
+          setState(() => isLogging = false);
+          return;
+        }
+      }
+
+      // 4️⃣ Execute Action
+      print("DEBUG: Calling logAttendance...");
+      final result = await controller.logAttendance().timeout(
+         const Duration(seconds: 10),
+         onTimeout: () => throw Exception("Network timeout during logging."),
+      );
+
+      print("DEBUG: logAttendance result: $result");
+
+      if (result['success'] == true) {
+        if (action == AttendanceAction.checkIn) {
+          showMessage(
+            "You are now clocked in\nHave a productive day",
+            subtitle: "Time recorded successfully",
+          );
+        } else if (action == AttendanceAction.earlyCheckOut) {
+          showMessage("Clock out recorded");
+        } else if (action == AttendanceAction.checkOut) {
+          showMessage("You are now clocked out\nSee you next time");
+        }
+      } else {
+        showErrorDialog(result['message'] ?? "Unknown error");
+      }
     } catch (e) {
-      showMessage("Error: $e");
+      print("DEBUG: Exception in handleAttendanceAction: $e");
+      String msg = e.toString().replaceAll("Exception: ", "");
+      if (msg.contains("Network timeout") || msg.contains("Client is offline")) {
+        msg = "Unable to connect.\n\nPlease check your internet connection and try again.";
+      }
+      showErrorDialog(msg);
     }
 
     if (mounted) {
@@ -80,10 +180,40 @@ class _AttendancePageState extends ConsumerState<AttendancePage> {
     }
   }
 
-  void showMessage(String msg) {
+  Future<void> showErrorDialog(String message) async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Error"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void showMessage(String msg, {String? subtitle}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(subtitle),
+            ],
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -152,7 +282,7 @@ class _AttendancePageState extends ConsumerState<AttendancePage> {
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: isLogging ? null : logAttendance,
+            onPressed: isLogging ? null : handleAttendanceAction,
             child: Text(isLogging ? "Processing..." : "Log Attendance"),
           ),
           if (formattedClockIn.isNotEmpty) ...[

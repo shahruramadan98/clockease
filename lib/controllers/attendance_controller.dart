@@ -12,10 +12,44 @@ final attendanceListProvider = StreamProvider<List<AttendanceRecord>>((ref) {
 // Action Provider
 final attendanceControllerProvider = Provider((ref) => AttendanceController(ref));
 
+enum AttendanceAction {
+  checkIn,
+  checkOut,
+  earlyCheckOut,
+  alreadyCompleted,
+}
+
 class AttendanceController {
   final Ref ref;
 
   AttendanceController(this.ref);
+
+  Future<AttendanceAction> getNextAction() async {
+    final now = DateTime.now();
+    final firestoreService = ref.read(firestoreServiceProvider);
+
+    final existingRecord =
+        await firestoreService.getAttendanceRecordForDate(now);
+
+    print("DEBUG: Checking existing record for $now");
+    if (existingRecord == null) {
+      print("DEBUG: No record found. Returning checkIn");
+      return AttendanceAction.checkIn;
+    } else if (existingRecord.clockOut == null) {
+      // Check if it's early checkout
+      // Shift rules: Ends at 5:00 PM (17:00)
+      final shiftEnd = DateTime(now.year, now.month, now.day, 17, 0);
+      if (now.isBefore(shiftEnd)) {
+        print("DEBUG: Early checkout detected");
+        return AttendanceAction.earlyCheckOut;
+      }
+      print("DEBUG: Normal checkout detected");
+      return AttendanceAction.checkOut;
+    } else {
+      print("DEBUG: Already completed");
+      return AttendanceAction.alreadyCompleted;
+    }
+  }
 
   Future<Map<String, dynamic>> logAttendance() async {
     try {

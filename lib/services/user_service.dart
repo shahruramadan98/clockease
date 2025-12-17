@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../models/user_profile.dart';
 
 class UserService {
   final _db = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
 
-  Future<Map<String, dynamic>?> getEmployeeProfile() async {
+  Future<UserProfile?> getEmployeeProfile() async {
     final user = _auth.currentUser;
     if (user == null) return null;
 
@@ -20,7 +21,7 @@ class UserService {
           .get();
 
       if (empDoc.exists && empDoc.data() != null) {
-        return empDoc.data();
+        return UserProfile.fromMap(user.uid, empDoc.data()!);
       }
     }
 
