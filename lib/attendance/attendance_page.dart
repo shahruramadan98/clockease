@@ -28,7 +28,8 @@ class AttendancePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final attendanceState = ref.watch(attendanceListProvider);
+    final attendanceState = ref.watch(attendanceProvider);
+
 
     return Scaffold(
       // backgroundColor: Use default theme
