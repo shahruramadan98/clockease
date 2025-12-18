@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+//import 'package:firebase_auth/firebase_auth.dart';
 import 'dashboard/dashboard.dart';
 import 'services/user_service.dart';
 import 'attendance/attendance_page.dart';
-import 'leave/leave_home_page.dart';
+import 'leave/leave_page.dart';
 import 'profile/profile_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -63,7 +63,7 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Attendance"),
-          BottomNavigationBarItem(icon: Icon(Icons.beach_access), label: "Leave"),
+          BottomNavigationBarItem(icon: Icon(Icons.beach_access), label: "Leaves"),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
           BottomNavigationBarItem(icon: Icon(Icons.insights), label: "Insights"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),

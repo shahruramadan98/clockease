@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class LeavePage extends StatelessWidget {
   const LeavePage({super.key});
@@ -173,9 +176,6 @@ class LeaveBalancesSection extends StatelessWidget {
     );
   }
 }
-
-
-
 
 
 // Upcoming Leave Section Widget (Updated Annual Leave design with dual-tone gradient)
@@ -416,6 +416,36 @@ class LeaveApplicationForm extends StatefulWidget {
 }
 
 class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
+  Future<void> submitLeave() async {
+    if (selectedLeaveType == null || startDate == null || endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please complete all fields")),
+      );
+      return;
+    }
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) return;
+
+    await FirebaseFirestore.instance
+        .collection('leave_applications')
+        .add({
+      'userId': user.uid,
+      'leaveType': selectedLeaveType,
+      'startDate': startDate,
+      'endDate': endDate,
+      'status': 'pending',
+      'createdAt': Timestamp.now(),
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Leave request submitted")),
+    );
+
+    Navigator.pop(context); // go back to LeavePage
+  }
+
   // Initialize the variables
   String? selectedLeaveType; // Default leave type is null, allowing the dropdown to be empty
   DateTime? startDate;
@@ -513,9 +543,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                // Handle the submit action here
-              },
+              onPressed: submitLeave,
               child: const Text("Submit Leave Request"),
             ),
           ],
