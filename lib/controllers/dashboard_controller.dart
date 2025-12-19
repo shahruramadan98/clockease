@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dashboard_attendance_state.dart';
 import '../services/attendance_service.dart';
+import '../services/location_service.dart';
 
 class DashboardController extends StateNotifier<DashboardAttendanceState> {
   DashboardController() : super(DashboardAttendanceState.initial()) {
@@ -22,12 +23,15 @@ class DashboardController extends StateNotifier<DashboardAttendanceState> {
   }
 
   /// Called after Face Verification returns a file
-  Future<void> confirmAttendance(File selfieImage) async {
+  Future<void> confirmAttendance(File selfieImage, LocationData confirmedLocation) async {
     // 1. PRE-CHECK: (Removed completed check)
 
     try {
-      // 2. UPLOAD & LOG
-      await _attendanceService.uploadSelfieAndLogAttendance(selfieImage);
+      // 2. UPLOAD & LOG with confirmed location
+      await _attendanceService.uploadSelfieAndLogAttendance(
+        selfieImage,
+        confirmedLocation: confirmedLocation,
+      );
 
       // 3. RE-FETCH SOURCE OF TRUTH
       // Instead of manual state updates, we fetch the updated record from backend

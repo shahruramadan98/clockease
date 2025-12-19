@@ -7,12 +7,22 @@ class AttendanceLog {
   final AttendanceLogType type;
   final DateTime timestamp;
   final String? faceImagePath;
+  
+  // Location fields
+  final double? latitude;
+  final double? longitude;
+  final double? accuracy;
+  final String? address;
 
   AttendanceLog({
     this.id,
     required this.type,
     required this.timestamp,
     this.faceImagePath,
+    this.latitude,
+    this.longitude,
+    this.accuracy,
+    this.address,
   });
 
   factory AttendanceLog.fromMap(Map<String, dynamic> map, String id) {
@@ -26,20 +36,39 @@ class AttendanceLog {
       return DateTime.now();
     }
 
+    // Extract location data if present
+    final locationMap = map['location'] as Map<String, dynamic>?;
+
     return AttendanceLog(
       id: id,
       type: typeFromStr(map['type']),
       timestamp: toDate(map['timestamp']),
       faceImagePath: map['faceImagePath'],
+      latitude: locationMap?['latitude']?.toDouble(),
+      longitude: locationMap?['longitude']?.toDouble(),
+      accuracy: locationMap?['accuracy']?.toDouble(),
+      address: locationMap?['address'],
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final map = {
       'type': type == AttendanceLogType.checkIn ? 'checkIn' : 'checkOut',
       'timestamp': Timestamp.fromDate(timestamp),
       'faceImagePath': faceImagePath,
     };
+
+    // Add location data if available
+    if (latitude != null && longitude != null) {
+      map['location'] = {
+        'latitude': latitude,
+        'longitude': longitude,
+        'accuracy': accuracy,
+        if (address != null) 'address': address,
+      };
+    }
+
+    return map;
   }
 
   String get formattedTime {

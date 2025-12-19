@@ -4,9 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../controllers/dashboard_controller.dart';
 import '../../models/dashboard_attendance_state.dart'; // Import for AttendanceStep
 import '../../features/attendance/face_verification_page.dart';
+import '../../widgets/location_confirmation_dialog.dart';
+import '../../services/location_service.dart';
 
 class ClockCard extends ConsumerWidget {
   const ClockCard({super.key});
+
+  /// Show location confirmation dialog and return confirmed location
+  Future<LocationData?> _showLocationConfirmation(BuildContext context) async {
+    return await showModalBottomSheet<LocationData>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const LocationConfirmationDialog(),
+    );
+  }
 
   @override
   @override
@@ -46,39 +58,44 @@ class ClockCard extends ConsumerWidget {
               );
             }
           : () async {
-        // 1. Navigate to face verification screen
+        // STEP 1: Get and confirm location FIRST
+        final confirmedLocation = await _showLocationConfirmation(context);
+        
+        // If user cancelled location confirmation, don't proceed
+        if (confirmedLocation == null) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Location confirmation cancelled'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
+        }
+
+        // STEP 2: Navigate to face verification screen (UNCHANGED)
         final result = await Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const FaceVerificationPage()),
         );
 
-        // 2. If face matches, result will be the file path (String)
+        // STEP 3: If face matches, result will be the file path (String)
         if (result != null && result is String) {
           final file = File(result);
 
-          // The `verified` variable is not defined in the original code.
-          // Assuming `result` being a String means verification was successful.
-          // If `result` is null or not a String, it implies verification failed or was cancelled.
-          // The original code proceeds with `confirmAttendance` if `result` is a String.
-          // The requested change introduces a new `verified` check and `toggleClock` call.
-          // To maintain syntactic correctness and align with the spirit of adding a mounted check,
-          // I'm interpreting the requested change as a refactoring of the success path
-          // where `result` being a String implies success, and `confirmAttendance` is the action.
-          // The `toggleClock` and `verified` variable are not present in the original context,
-          // so I'm applying the `mounted` check where it makes sense for the existing flow.
-
           try {
             // Show loading
-            if (context.mounted) { // Added mounted check before showing SnackBar
+            if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Processing attendance...")),
               );
             }
 
-            // 3. Confirm Attendance (API Call)
-            await controller.confirmAttendance(file);
+            // 4. Confirm Attendance (API Call) with confirmed location
+            await controller.confirmAttendance(file, confirmedLocation);
 
-          // 4. Success Message
+          // 5. Success Message
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -93,7 +110,7 @@ class ClockCard extends ConsumerWidget {
             }
             
           } catch (e) {
-            // 5. Error Message
+            // 6. Error Message
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
