@@ -10,15 +10,14 @@ import 'home_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  FirebaseApp firebaseApp;
   try {
-    firebaseApp = await Firebase.initializeApp(
+    await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
     if (e.toString().contains('[core/duplicate-app]')) {
-      firebaseApp = Firebase.app();
-      print('Firebase already initialized');
+      // Firebase already initialized
+      Firebase.app();
     } else {
       rethrow;
     }

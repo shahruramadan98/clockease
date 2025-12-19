@@ -16,7 +16,7 @@ class Dashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(userProvider);
-    final attendance = ref.watch(dashboardProvider);
+
 
     return Scaffold(
       backgroundColor: Colors.white,

@@ -42,7 +42,7 @@ class QuickActionCard extends StatelessWidget {
             width: 45,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withOpacity(0.25),
+              color: Colors.white.withValues(alpha: 0.2),
             ),
             child: Icon(icon, size: 26, color: Colors.white),
           ),
