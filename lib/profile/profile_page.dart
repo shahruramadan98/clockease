@@ -22,7 +22,16 @@ class ProfilePage extends ConsumerWidget {
       body: profileAsync.when(
         data: (profile) {
           if (profile == null) {
-            return const Center(child: Text('User profile not found'));
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Setting up your profile...'),
+                ],
+              ),
+            );
           }
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),

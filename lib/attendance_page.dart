@@ -1,26 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:camera/camera.dart';
-import 'package:clockease/controllers/attendance_controller.dart';
-import 'package:clockease/utils/date_formatter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:clockease/services/user_service.dart'; // Import your user service
+import 'package:clockease/utils/date_formatter.dart';  // Import the formatClockIn function
 
-class AttendancePage extends ConsumerStatefulWidget {
+class AttendancePage extends StatefulWidget {
   const AttendancePage({super.key});
 
   @override
-  ConsumerState<AttendancePage> createState() => _AttendancePageState();
+  State<AttendancePage> createState() => _AttendancePageState();
 }
 
-class _AttendancePageState extends ConsumerState<AttendancePage> {
+class _AttendancePageState extends State<AttendancePage> {
   CameraController? cameraController;
   bool isLogging = false;
-
   final FaceDetector faceDetector = FaceDetector(
     options: FaceDetectorOptions(
+      enableContours: false,
+      enableLandmarks: false,
       performanceMode: FaceDetectorMode.fast,
     ),
   );
+
+  late Timestamp clockInTimestamp;  // Store clock-in timestamp from Firestore
 
   @override
   void initState() {
@@ -37,112 +41,92 @@ class _AttendancePageState extends ConsumerState<AttendancePage> {
         enableAudio: false,
       );
       await cameraController!.initialize();
-      if (mounted) setState(() {});
+      setState(() {});
     }
   }
 
-  // =====================================================
-  // ATTENDANCE HANDLER
-  // =====================================================
-  Future<void> handleAttendanceAction() async {
-    if (cameraController == null || !cameraController!.value.isInitialized) {
-      showErrorDialog(
-        "Camera not ready. Please restart the app or check permissions.",
-      );
-      return;
-    }
+  Future<void> logAttendance() async {
+    if (cameraController == null || !cameraController!.value.isInitialized) return;
 
-    setState(() => isLogging = true);
+    setState(() {
+      isLogging = true;
+    });
 
     try {
       // 1️⃣ Capture image
       final XFile file = await cameraController!.takePicture();
 
-      // 2️⃣ Face detection
+      // 2️⃣ Detect face
       final inputImage = InputImage.fromFilePath(file.path);
       final faces = await faceDetector.processImage(inputImage);
 
       if (faces.isEmpty) {
-        showErrorDialog(
-          "Face not detected. Please ensure your face is clearly visible.",
-        );
+        showMessage("Face not detected!");
         setState(() => isLogging = false);
         return;
       }
 
-      // 3️⃣ Log attendance (controller decides check-in / check-out)
-      final controller = ref.read(attendanceControllerProvider);
-
-      final result = await controller.logAttendance().timeout(
-        const Duration(seconds: 10),
-        onTimeout: () =>
-            throw Exception("Network timeout. Please try again."),
-      );
-
-      if (result['success'] == true) {
-        final type = result['type'];
-
-        if (type == 'checkIn') {
-          showMessage(
-            "You are now clocked in",
-            subtitle: "Have a productive day",
-          );
-        } else if (type == 'checkOut') {
-          showMessage(
-            "You are now clocked out",
-            subtitle: "See you next time",
-          );
-        }
-      } else {
-        showErrorDialog(result['message'] ?? "Unknown error");
+      // 3️⃣ Get user info from UserService
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        showMessage("User not logged in!");
+        setState(() => isLogging = false);
+        return;
       }
+
+      // Retrieve user profile details
+      final userProfile = await UserService().getEmployeeProfile();
+      if (userProfile == null) {
+        showMessage("User profile not found!");
+        setState(() => isLogging = false);
+        return;
+      }
+
+      final fullName = userProfile.fullName;
+      final email = userProfile.email;
+
+      // 4️⃣ Check if attendance already logged today
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+
+      final query = await FirebaseFirestore.instance
+          .collection('attendance')
+          .where('userId', isEqualTo: user.uid)
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        showMessage("You already logged attendance today!");
+        setState(() => isLogging = false);
+        return;
+      }
+
+      // 5️⃣ Log attendance to Firestore
+      await FirebaseFirestore.instance.collection('attendance').add({
+        'userId': user.uid,
+        'fullName': fullName,
+        'email': email,
+        'timestamp': Timestamp.now(),
+        'status': 'Present', // Attendance status
+      });
+
+      // Fetch the `clockIn` timestamp after logging attendance
+      clockInTimestamp = Timestamp.now();
+
+      showMessage("Attendance logged successfully!");
     } catch (e) {
-      String msg = e.toString().replaceAll("Exception: ", "");
-      showErrorDialog(msg);
+      print("Error: $e");
+      showMessage("Error logging attendance");
     }
 
-    if (mounted) {
-      setState(() => isLogging = false);
-    }
+    setState(() {
+      isLogging = false;
+    });
   }
 
-  // =====================================================
-  // UI HELPERS
-  // =====================================================
-  Future<void> showErrorDialog(String message) async {
-    if (!mounted) return;
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Error"),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void showMessage(String msg, {String? subtitle}) {
-    if (!mounted) return;
+  void showMessage(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(subtitle),
-            ],
-          ],
-        ),
-      ),
+      SnackBar(content: Text(msg)),
     );
   }
 
@@ -153,39 +137,18 @@ class _AttendancePageState extends ConsumerState<AttendancePage> {
     super.dispose();
   }
 
-  // =====================================================
-  // BUILD
-  // =====================================================
   @override
   Widget build(BuildContext context) {
-    final attendanceState = ref.watch(attendanceProvider);
-
-    String formattedClockIn = '';
-
-    if (attendanceState.hasValue) {
-      final records = attendanceState.value!;
-      final now = DateTime.now();
-
-      try {
-        final todayRecord = records.firstWhere(
-          (r) =>
-              r.date.year == now.year &&
-              r.date.month == now.month &&
-              r.date.day == now.day,
-        );
-
-        if (todayRecord.clockIn != null) {
-          formattedClockIn = formatClockIn(todayRecord.clockIn!);
-        }
-      } catch (_) {
-        // No record today
-      }
-    }
-
     if (cameraController == null || !cameraController!.value.isInitialized) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
+    }
+
+    // Format the clockIn timestamp to a user-friendly string if it's set
+    String formattedClockIn = '';
+    if (clockInTimestamp != null) {
+      formattedClockIn = formatClockIn(clockInTimestamp);
     }
 
     return Scaffold(
@@ -198,12 +161,12 @@ class _AttendancePageState extends ConsumerState<AttendancePage> {
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: isLogging ? null : handleAttendanceAction,
+            onPressed: isLogging ? null : logAttendance,
             child: Text(isLogging ? "Processing..." : "Log Attendance"),
           ),
           if (formattedClockIn.isNotEmpty) ...[
             const SizedBox(height: 20),
-            Text("Clock-in time: $formattedClockIn"),
+            Text('Clock-in time: $formattedClockIn'),  // Display formatted clockIn time
           ],
         ],
       ),

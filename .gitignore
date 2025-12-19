@@ -43,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android build artifacts (comprehensive)
+**/android/**/build/
+**/android/**/*.apk
+**/android/**/*.so
+**/android/**/*.dex
+**/android/**/*.jar
+!**/android/gradle-wrapper.jar
+**/android/local.properties
+**/android/.gradle/
+**/android/captures/
+**/android/.externalNativeBuild/
+**/android/.cxx/

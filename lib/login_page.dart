@@ -27,36 +27,46 @@ class _LoginPageState extends State<LoginPage> {
 
     if (email.isEmpty || password.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Fill all fields')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Fill all fields')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Login successful')));
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil('/home', (route) => false);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('✅ Login successful')));
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      final message = e.code == 'user-not-found'
-          ? 'No user found'
-          : e.code == 'wrong-password'
-              ? 'Wrong password'
-              : e.message ?? 'Error';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      String message;
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password. Try again.';
+      } else {
+        message = e.message ?? 'Authentication error.';
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('❌ $message')));
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('⚠️ ${e.toString()}')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -69,6 +79,7 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
+          // TOP LEFT TRIANGLE
           Positioned(
             top: 0,
             left: 0,
@@ -81,6 +92,8 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
+
+          // BOTTOM RIGHT TRIANGLE
           Positioned(
             bottom: 0,
             right: 0,
@@ -93,41 +106,41 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
+
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
                 children: [
-                  Column(
-                    children: [
-                      Image.asset('assets/images/logo.png', height: 80),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Login',
-                        style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      Container(
-                        height: 4,
-                        width: 70,
-                        color: const Color(0xFF4CBFDA),
-                        margin: const EdgeInsets.only(top: 4),
-                      ),
-                    ],
+                  Image.asset('assets/images/logo.png', height: 80),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Login',
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
+                  Container(
+                    height: 4,
+                    width: 70,
+                    color: const Color(0xFF4CBFDA),
+                    margin: const EdgeInsets.only(top: 4),
+                  ),
+
                   const SizedBox(height: 40),
+
                   TextField(
                     controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       hintText: 'Enter Your Email',
                       border: UnderlineInputBorder(),
                     ),
                   ),
+
                   const SizedBox(height: 20),
+
                   TextField(
                     controller: _passwordController,
                     obscureText: true,
@@ -136,6 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                       border: UnderlineInputBorder(),
                     ),
                   ),
+
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -149,7 +163,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 20),
+
                   SizedBox(
                     width: double.infinity,
                     height: 48,
@@ -159,7 +175,6 @@ class _LoginPageState extends State<LoginPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        elevation: 2,
                       ),
                       onPressed: _isLoading ? null : _signIn,
                       child: _isLoading
@@ -174,7 +189,9 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                     ),
                   ),
+
                   const SizedBox(height: 40),
+
                   TextButton(
                     onPressed: () {
                       Navigator.push(
@@ -219,5 +236,5 @@ class _TriangleClipper extends CustomClipper<Path> {
   }
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

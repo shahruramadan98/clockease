@@ -1,5 +1,5 @@
 # Uncomment this line to define a global platform for your project
-# platform :ios, '13.0'
+ platform :ios, '17.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -37,7 +37,22 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  # Some Flutter SDK versions expose helper functions differently. Instead of
+  # calling `flutter_post_install` (which may be undefined), call the
+  # available helper that applies the necessary iOS build settings.
   installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
+    # Apply Flutter-specific iOS build settings when the target depends on
+    # Flutter. This mirrors the behaviour of `flutter_post_install`.
+    begin
+      flutter_additional_ios_build_settings(target)
+    rescue NoMethodError
+      # If the helper is not available, continue without modifying the target.
+    end
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '17.0'
+    end
   end
 end
+
+
+

@@ -18,86 +18,97 @@ class AttendanceRecord {
     required this.status,
   });
 
-  // =====================================================
-  // UI HELPERS
-  // =====================================================
   String get dateString => "${date.day}-${date.month}-${date.year}";
 
-  String get shift => "8AM - 5PM";
-
-  String get breakTime => "1h";
-
-  String get formattedLateDuration => _formatDuration(lateDuration);
-
-  String get formattedTotalHours => _formatDuration(totalHours);
-
-  // =====================================================
-  // COPY WITH METHOD (USED FOR STATE UPDATES)
-  // =====================================================
-  AttendanceRecord copyWith({
-    DateTime? date,
-    DateTime? clockIn,
-    DateTime? clockOut,
-    Duration? totalHours,
-    Duration? lateDuration,
-    AttendanceStatus? status,
-  }) {
-    return AttendanceRecord(
-      date: date ?? this.date,
-      clockIn: clockIn ?? this.clockIn,
-      clockOut: clockOut ?? this.clockOut,
-      totalHours: totalHours ?? this.totalHours,
-      lateDuration: lateDuration ?? this.lateDuration,
-      status: status ?? this.status,
-    );
-  }
-
-  // =====================================================
-  // FIRESTORE SERIALIZATION (FROM Map and to Map)
-  // =====================================================
   factory AttendanceRecord.fromMap(Map<String, dynamic> map) {
-    DateTime? toDate(dynamic v) {
-      if (v is Timestamp) return v.toDate();
+    // 1. CONSTANTS (Static Schedule)
+    const int workStartHour = 8;
+    // const int workEndHour = 17; // 5 PM
+    const Duration breakDuration = Duration(hours: 1);
+
+    // --- SAFE PARSING FOR DATE ---
+    DateTime _parseDate(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is Timestamp) return value.toDate();
+      if (value is String) return DateTime.parse(value);
+      return DateTime.now();
+    }
+
+    DateTime? _parseNullableDate(dynamic value) {
+      if (value == null) return null;
+      if (value is Timestamp) return value.toDate();
+      if (value is String) return DateTime.parse(value);
       return null;
     }
 
+    // 2. PARSE TIMESTAMPS
+    final date = _parseDate(map['date']);
+    final clockIn = _parseNullableDate(map['checkIn']);
+    final clockOut = _parseNullableDate(map['checkOut']);
+
+    // 3. DYNAMIC CALCULATIONS (Logic Separation)
+
+    // A. Status & Late Duration
+    AttendanceStatus status = AttendanceStatus.absent; // default
+    Duration lateDuration = Duration.zero;
+
+    if (clockIn != null) {
+      // Create "8:00 AM" for the *same day* as the clockIn
+      final scheduledStart = DateTime(
+        clockIn.year,
+        clockIn.month,
+        clockIn.day,
+        workStartHour,
+        0,
+      );
+
+      // On Time → check-in time <= 8:00 AM
+      // Late → check-in time > 8:00 AM
+      if (clockIn.isAfter(scheduledStart)) {
+        status = AttendanceStatus.late;
+        lateDuration = clockIn.difference(scheduledStart);
+      } else {
+        status = AttendanceStatus.onTime;
+        lateDuration = Duration.zero;
+      }
+    } else {
+      status = AttendanceStatus.absent;
+    }
+
+    // B. Total Working Hours
+    Duration totalHours = Duration.zero;
+    if (clockIn != null && clockOut != null) {
+      final rawDuration = clockOut.difference(clockIn);
+      // Formula: (checkOut - checkIn) - breakTime
+      totalHours = rawDuration - breakDuration;
+      
+      // Prevent negative hours
+      if (totalHours.isNegative) {
+        totalHours = Duration.zero;
+      }
+    }
+
+    // Override status for half-day or absent logic if needed, 
+    // but user requested STRICT simpler logic for now.
+
     return AttendanceRecord(
-      date: toDate(map['date']) ?? DateTime.now(),
-      clockIn: toDate(map['clockIn']),
-      clockOut: toDate(map['clockOut']),
-      totalHours: Duration(minutes: map['totalHours'] ?? 0),
-      lateDuration: Duration(minutes: map['lateDuration'] ?? 0),
-      status: AttendanceStatus.values.firstWhere(
-        (e) => e.name == map['status'],
-        orElse: () => AttendanceStatus.onTime,
-      ),
+      date: date,
+      clockIn: clockIn,
+      clockOut: clockOut,
+      totalHours: totalHours,
+      lateDuration: lateDuration,
+      status: status,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      "date": Timestamp.fromDate(date),
-      "clockIn": clockIn != null ? Timestamp.fromDate(clockIn!) : null,
-      "clockOut": clockOut != null ? Timestamp.fromDate(clockOut!) : null,
-      "totalHours": totalHours.inMinutes,
-      "lateDuration": lateDuration.inMinutes,
-      "status": status.name,
+      'date': Timestamp.fromDate(date),
+      'checkIn': clockIn != null ? Timestamp.fromDate(clockIn!) : null,
+      'checkOut': clockOut != null ? Timestamp.fromDate(clockOut!) : null,
+      'totalMinutes': totalHours.inMinutes,
+      'lateMinutes': lateDuration.inMinutes,
+      'status': status.index,
     };
-  }
-
-  // =====================================================
-  // INTERNAL HELPERS
-  // =====================================================
-  String _formatDuration(Duration d) {
-    if (d.inMinutes == 0) return "0 mins";
-
-    final hours = d.inHours;
-    final minutes = d.inMinutes.remainder(60);
-
-    if (hours > 0) {
-      return minutes == 0 ? "${hours}h" : "${hours}h ${minutes}m";
-    } else {
-      return "${minutes}m";
-    }
   }
 }

@@ -1,8 +1,11 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../controllers/dashboard_controller.dart';
 import '../controllers/user_provider.dart';
+import '../login_page.dart';
+
 import 'widgets/greeting_card.dart';
 import 'widgets/clock_card.dart';
 import 'widgets/quick_action_card.dart';
@@ -16,7 +19,32 @@ class Dashboard extends ConsumerWidget {
     final attendance = ref.watch(dashboardProvider);
 
     return Scaffold(
-      // backgroundColor: Use default theme background
+      backgroundColor: Colors.white,
+
+      // ===========================
+      // 🔥 ADDED LOGOUT BUTTON HERE
+      // ===========================
+      appBar: AppBar(
+        title: const Text("ClockEase"),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (context.mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+
       body: SafeArea(
         child: user.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -28,17 +56,17 @@ class Dashboard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const GreetingCard(),
-
                   const SizedBox(height: 20),
 
                   const ClockCard(),
-
                   const SizedBox(height: 25),
 
-                  Text(
+                  const Text(
                     "Quick Actions",
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    style: TextStyle(
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
 

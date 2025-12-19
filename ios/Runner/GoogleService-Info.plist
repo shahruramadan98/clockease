@@ -2,18 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>60493495817-cb9v31egq78gglcmejcs8c24aacfbh9b.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.60493495817-cb9v31egq78gglcmejcs8c24aacfbh9b</string>
 	<key>API_KEY</key>
-	<string>AIzaSyADcSnDS6gI2REcbcM26ze9wHRwwFeZ8a0</string>
+	<string>AIzaSyAeRAF00vStXaciot6LGIt73cdy42kBo9k</string>
 	<key>GCM_SENDER_ID</key>
-	<string>492759847959</string>
+	<string>60493495817</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.clockease</string>
+	<string>com.team6.clockease</string>
 	<key>PROJECT_ID</key>
-	<string>clockease</string>
+	<string>clockease-e1a29</string>
 	<key>STORAGE_BUCKET</key>
-	<string>clockease.firebasestorage.app</string>
+	<string>clockease-e1a29.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:492759847959:ios:ace9bc52964080d0f3f852</string>
+	<string>1:60493495817:ios:2c2661b5e4f18d454f82d8</string>
 </dict>
 </plist>

@@ -30,10 +30,10 @@ class AttendancePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final attendanceState = ref.watch(attendanceProvider);
 
-
     return Scaffold(
-      // backgroundColor: Use default theme
+      backgroundColor: Colors.white,
       
+
       body: attendanceState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text("Failed to load: $e")),
@@ -44,7 +44,7 @@ class AttendancePage extends ConsumerWidget {
 
           final now = DateTime.now();
 
-          // Placeholder to avoid empty replacement until I find the correct file: current month only
+          // Filter: current month only
           final thisMonthRecords = records.where((r) =>
               r.date.year == now.year && r.date.month == now.month).toList();
 
@@ -77,26 +77,24 @@ class AttendancePage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // PAGE TITLE
-                Text(
+                const Text(
                   "Attendance History",
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).brightness == Brightness.dark 
-                        ? Colors.white 
-                        : const Color(0xFF3F51B5),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF3F51B5),
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
                 // MONTHLY SUMMARY TITLE
-                Text(
+                const Text(
                   "Monthly Summaries",
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: TextStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Theme.of(context).brightness == Brightness.dark 
-                        ? Colors.white70 
-                        : const Color(0xFF3F51B5),
+                    color: Color(0xFF3F51B5),
                   ),
                 ),
 
@@ -137,13 +135,12 @@ class AttendancePage extends ConsumerWidget {
 
                 const SizedBox(height: 24),
 
-                Text(
+                const Text(
                   "Daily Attendance",
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: TextStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Theme.of(context).brightness == Brightness.dark 
-                        ? Colors.white70 
-                        : const Color(0xFF3F51B5),
+                    color: Color(0xFF3F51B5),
                   ),
                 ),
 
@@ -157,16 +154,17 @@ class AttendancePage extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final r = records[index];
 
-                      return AttendanceCard(
-  date: r.dateString,
-  shift: "8AM - 5PM",
-  breakTime: "1h",
-  totalHours: r.formattedTotalHours,
-  clockIn: r.clockIn != null ? _formatTime(r.clockIn!) : "--",
-  clockOut: r.clockOut != null ? _formatTime(r.clockOut!) : "--",
-  status: r.status,
-  lateDuration: r.formattedLateDuration,
-);
+                    return AttendanceCard(
+                      date: r.dateString,
+                      shift: "8AM – 5PM",
+                      breakTime: "1h",
+                      totalHours: _formatDuration(r.totalHours),
+                      lastAction: r.clockOut != null
+                          ? _formatTime(r.clockOut!)
+                          : "--",
+                      status: r.status,
+                      lateDuration: r.lateDuration,
+                    );
                   },
                 ),
               ],

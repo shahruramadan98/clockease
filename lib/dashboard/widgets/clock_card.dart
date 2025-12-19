@@ -1,129 +1,181 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../controllers/dashboard_controller.dart';
-import '../../face_verification/face_verification_page.dart';
+import '../../models/dashboard_attendance_state.dart'; // Import for AttendanceStep
+import '../../features/attendance/face_verification_page.dart';
 
 class ClockCard extends ConsumerWidget {
   const ClockCard({super.key});
 
   @override
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(dashboardProvider);  // Watch the dashboard state
+    final state = ref.watch(dashboardProvider);
     final controller = ref.read(dashboardProvider.notifier);
 
-    final isClockedIn = state.isClockedIn;
+    // Derive UI properties from the step
+    String title;
+    String subtitle;
+    IconData icon;
+    List<Color> gradientColors;
+    bool isActionable;
+
+    switch (state.step) {
+      case AttendanceStep.notStarted:
+        title = "Clock In";
+        subtitle = "Tap to verify face to clock in";
+        icon = Icons.face_retouching_natural;
+        gradientColors = [const Color(0xFF3470D9), const Color(0xFF4CBFDA)];
+        isActionable = true;
+        break;
+      case AttendanceStep.clockedIn:
+        title = "Clock Out";
+        subtitle = "Tap to clock out";
+        icon = Icons.logout_rounded;
+        gradientColors = [const Color(0xFFE57373), const Color(0xFFD32F2F)];
+        isActionable = true;
+        break;
+    }
 
     return GestureDetector(
-      onTap: () async {
-        // -----------------------------------------------------
-        // USER ALREADY CLOCKED IN → CLOCK OUT DIRECTLY
-        // -----------------------------------------------------
-        if (isClockedIn) {
-          await controller.toggleClock();  // Ensure state is updated after clocking out
-          return;
-        }
-
-        // -----------------------------------------------------
-        // USER CLOCKED OUT → REQUIRE FACE VERIFICATION
-        // -----------------------------------------------------
-        final verified = await Navigator.push(
+      onTap: !isActionable
+          ? () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("You have already completed attendance today.")),
+              );
+            }
+          : () async {
+        // 1. Navigate to face verification screen
+        final result = await Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const FaceVerificationPage(),
-          ),
+          MaterialPageRoute(builder: (_) => const FaceVerificationPage()),
         );
 
-        if (verified == true) {
-          await controller.toggleClock();  // Clock in if verification is successful
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Face verification required")),
-          );
-        }
+        // 2. If face matches, result will be the file path (String)
+        if (result != null && result is String) {
+          final file = File(result);
+
+          try {
+            // Show loading
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Processing attendance...")),
+            );
+
+            // 3. Confirm Attendance (API Call)
+            await controller.confirmAttendance(file);
+
+          // 4. Success Message
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.step == AttendanceStep.clockedIn 
+                    ? "Successfully Clocked OUT" 
+                    : "Successfully Clocked IN"
+                  ),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+            
+          } catch (e) {
+            // 5. Error Message
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("Attendance Failed: ${e.toString().replaceAll('Exception: ', '')}"),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        } 
       },
 
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF3470D9), Color(0xFF4CBFDA)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: gradientColors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+
+            child: Row(
+              children: [
+                // LEFT SIDE
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // MAIN ACTION
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // ACTUAL STATUS
+                      Text(
+                        state.lastAction != null
+                            ? "Last action: ${state.lastAction}"
+                            : "No recent activity",
+                        style: const TextStyle(fontSize: 15, color: Colors.white70),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // INSTRUCTIONS
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // RIGHT ICON
+                Container(
+                  height: 90,
+                  width: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.25),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 50,
+                  ),
+                ),
+              ],
+            ),
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // LEFT SIDE
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // MAIN ACTION
-                  Text(
-                    isClockedIn ? "Clock Out" : "Clock In",
-                    style: const TextStyle(
-                      fontSize: 22,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+          
+          // --- DEV RESET BUTTON ---
 
-                  const SizedBox(height: 4),
-
-                  // ACTUAL STATUS
-                  Text(
-                    isClockedIn
-                        ? "Clocked in at: ${state.lastAction ?? '--'}"
-                        : "Not clocked in",
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Colors.white70,
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // INSTRUCTIONS
-                  Text(
-                    isClockedIn
-                        ? "Tap to clock out"
-                        : "Tap to verify face to clock in",
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // RIGHT ICON
-            Container(
-              height: 90,
-              width: 90,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.25),
-              ),
-              child: Icon(
-                isClockedIn
-                    ? Icons.logout_rounded
-                    : Icons.face_retouching_natural,
-                color: Colors.white,
-                size: 50,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

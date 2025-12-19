@@ -1,96 +1,51 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dashboard_attendance_state.dart';
-import '../models/attendance_record.dart';
-import '../services/firestore_service.dart';
-import '../models/attendance_status.dart';
-
-final dashboardProvider = StateNotifierProvider<DashboardController, DashboardAttendanceState>(
-  (ref) => DashboardController(ref.read(firestoreServiceProvider)),
-);
+import '../services/attendance_service.dart';
 
 class DashboardController extends StateNotifier<DashboardAttendanceState> {
-  DashboardController(this._service) : super(DashboardAttendanceState.initial()) {
+  DashboardController() : super(DashboardAttendanceState.initial()) {
     loadToday();
   }
 
-  final FirestoreService _service;
+  final _attendanceService = AttendanceService();
 
-  // =====================================================
-  // LOAD TODAY STATE FROM FIRESTORE
-  // =====================================================
   Future<void> loadToday() async {
-    final record = await _service.getTodayRecord();
-
-    if (record == null) {
+    // UNIFIED SOURCE: Fetch from attendance/...
+    final data = await _attendanceService.getTodayRecord();
+    if (data != null) {
+      state = DashboardAttendanceState.fromMap(data);
+    } else {
+      // If record exists (or was deleted), reset to initial state
       state = DashboardAttendanceState.initial();
-      return;
     }
-
-    state = state.copyWith(
-      isClockedIn: record.clockOut == null,
-      lastAction: record.clockOut == null
-          ? _formatTime(record.clockIn!)
-          : _formatTime(record.clockOut!),
-    );
   }
 
-  // =====================================================
-  // CLOCK IN / CLOCK OUT (FIRESTORE DRIVEN)
-  // =====================================================
- Future<void> toggleClock() async {
-  final now = DateTime.now();
-  final today = await _service.getTodayRecord();
+  /// Called after Face Verification returns a file
+  Future<void> confirmAttendance(File selfieImage) async {
+    // 1. PRE-CHECK: (Removed completed check)
 
-  // CLOCK IN
-  if (today == null) {
-    final record = AttendanceRecord(
-      date: DateTime(now.year, now.month, now.day),
-      clockIn: now,
-      clockOut: null,
-      totalHours: Duration.zero,
-      lateDuration: Duration.zero,
-      status: AttendanceStatus.onTime,
-    );
+    try {
+      // 2. UPLOAD & LOG
+      await _attendanceService.uploadSelfieAndLogAttendance(selfieImage);
 
-    await _service.saveRecord(record);
-    
-    // Delay added for Firestore update
-    await Future.delayed(Duration(seconds: 1));
+      // 3. RE-FETCH SOURCE OF TRUTH
+      // Instead of manual state updates, we fetch the updated record from backend
+      // This ensures 100% consistency with what the server thinks.
+      await loadToday();
 
-    // Reload the state after clocking in
-    await loadToday();
-    return;
+    } catch (e) {
+      // Rethrow to let UI show error
+      throw Exception(e.toString());
+    }
   }
 
-  // CLOCK OUT
-  if (today.clockOut == null) {
-    final workedMinutes = now.difference(today.clockIn!).inMinutes - 60; // deduct break time
 
-    final updated = today.copyWith(
-      clockOut: now,
-      totalHours: Duration(minutes: workedMinutes < 0 ? 0 : workedMinutes),
-    );
 
-    await _service.saveRecord(updated);
 
-    // Delay added for Firestore update
-    await Future.delayed(Duration(seconds: 1));
-
-    // Reload the state after clocking out
-    await loadToday();
-  }
 }
 
-
-
-
-  // =====================================================
-  // FORMAT TIME
-  // =====================================================
-  String _formatTime(DateTime t) {
-    final hour = t.hour % 12 == 0 ? 12 : t.hour % 12;
-    final minute = t.minute.toString().padLeft(2, '0');
-    final period = t.hour >= 12 ? 'PM' : 'AM';
-    return "$hour:$minute $period";
-  }
-}
+final dashboardProvider =
+    StateNotifierProvider<DashboardController, DashboardAttendanceState>(
+      (ref) => DashboardController(),
+    );

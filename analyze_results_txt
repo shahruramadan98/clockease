@@ -1,0 +1,34 @@
+Analyzing clockease...                                          
+
+   info • Don't invoke 'print' in production code • lib/attendance_page.dart:118:7 • avoid_print
+warning • The operand can't be 'null', so the condition is always 'true' • lib/attendance_page.dart:150:26 • unnecessary_null_comparison
+warning • The value of the local variable 'attendance' isn't used • lib/dashboard/dashboard.dart:19:11 • unused_local_variable
+   info • Don't use 'BuildContext's across async gaps • lib/dashboard/widgets/clock_card.dart:61:34 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/dashboard/widgets/clock_card.dart:164:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/dashboard/widgets/quick_action_card.dart:45:35 • deprecated_member_use
+warning • The value of the local variable 'fullName' isn't used • lib/face_attendance_page.dart:84:13 • unused_local_variable
+warning • The value of the local variable 'email' isn't used • lib/face_attendance_page.dart:85:7 • unused_local_variable
+   info • Don't use 'BuildContext's across async gaps • lib/face_attendance_page.dart:128:21 • use_build_context_synchronously
+   info • Don't invoke 'print' in production code • lib/face_attendance_page.dart:131:7 • avoid_print
+warning • Unused import: 'package:firebase_auth/firebase_auth.dart' • lib/home_page.dart:2:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/leave/leave_home_page.dart:126:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/leave/leave_home_page.dart:167:45 • deprecated_member_use
+   info • Invalid use of a private type in a public API • lib/leave/leave_home_page.dart:415:3 • library_private_types_in_public_api
+   info • Don't use 'BuildContext's across async gaps • lib/leave/leave_home_page.dart:508:40 • use_build_context_synchronously
+warning • The value of the local variable 'firebaseApp' isn't used • lib/main.dart:13:15 • unused_local_variable
+   info • Don't invoke 'print' in production code • lib/main.dart:21:7 • avoid_print
+   info • The local variable '_parseDate' starts with an underscore • lib/models/attendance_record.dart:30:14 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_parseNullableDate' starts with an underscore • lib/models/attendance_record.dart:37:15 • no_leading_underscores_for_local_identifiers
+   info • Don't invoke 'print' in production code • lib/services/attendance_service.dart:115:7 • avoid_print
+warning • The value of the local variable 'pixelStrideV' isn't used • lib/services/image_utils.dart:26:13 • unused_local_variable
+   info • The constant name 'SHIFT' isn't a lowerCamelCase identifier • lib/services/image_utils.dart:38:13 • constant_identifier_names
+   info • The constant name 'HALF' isn't a lowerCamelCase identifier • lib/services/image_utils.dart:39:13 • constant_identifier_names
+   info • Statements in an if should be enclosed in a block • lib/services/image_utils.dart:63:9 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/services/image_utils.dart:65:9 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/services/image_utils.dart:67:9 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/services/image_utils.dart:69:9 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/services/image_utils.dart:71:9 • curly_braces_in_flow_control_structures
+   info • Statements in an if should be enclosed in a block • lib/services/image_utils.dart:73:9 • curly_braces_in_flow_control_structures
+   info • Don't use 'BuildContext's across async gaps • lib/signup/signup_company_page.dart:72:28 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/signup/signup_employee_page.dart:54:28 • use_build_context_synchronously
+

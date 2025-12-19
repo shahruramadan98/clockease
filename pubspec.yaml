@@ -11,30 +11,26 @@ dependencies:
   flutter:
     sdk: flutter
 
-  flutter_riverpod: ^2.5.1
-  cupertino_icons: ^1.0.8
-
-  # Firebase
-  firebase_core: ^4.2.1
-  firebase_auth: ^6.1.2
-  cloud_firestore: ^6.1.0
-
-  # Google Sign-In
-  google_sign_in: ^7.0.0
-
-  # ML Kit
+  # Camera & Vision
+  camera: 0.10.5+5
   google_mlkit_face_detection: ^0.13.1
+  image: ^4.1.7
 
-  # Camera
-  camera: ^0.11.0+1
+  # Firebase (all compatible with each other)
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.6.12
+  firebase_storage: ^12.4.10   # <-- FIXED: compatible version
 
-  # Fonts
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Utilities
+  cupertino_icons: ^1.0.8
+  google_sign_in: ^7.0.0
   google_fonts: ^6.2.1
-
-  # Add this ↓↓↓
   intl: ^0.19.0
-
-
+  path_provider: ^2.0.15
 
 dev_dependencies:
   flutter_test:
@@ -46,3 +42,4 @@ flutter:
 
   assets:
     - assets/images/logo.png
+    - assets/models/mobile_face_net.tflite
