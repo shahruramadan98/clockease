@@ -75,7 +75,16 @@ class _AttendancePageState extends State<AttendancePage> {
       }
 
       // Retrieve user profile details
-      final userProfile = await UserService().getEmployeeProfile();
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+
+      if (uid == null) {
+        showMessage("User not logged in!");
+        setState(() => isLogging = false);
+        return;
+      }
+
+      final userProfile = await UserService().getEmployeeProfile(uid);
+
       if (userProfile == null) {
         showMessage("User profile not found!");
         setState(() => isLogging = false);

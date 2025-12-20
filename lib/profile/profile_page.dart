@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../controllers/profile_controller.dart';
 import '../controllers/theme_controller.dart';
-import '../login_page.dart';
+import '../admin/admin_home.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -20,6 +21,8 @@ class ProfilePage extends ConsumerWidget {
         elevation: 0,
       ),
       body: profileAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text('Error: $err')),
         data: (profile) {
           if (profile == null) {
             return const Center(
@@ -33,21 +36,27 @@ class ProfilePage extends ConsumerWidget {
               ),
             );
           }
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- HEADER ---
+                // ======================
+                // HEADER
+                // ======================
                 _buildHeader(profile),
                 const SizedBox(height: 24),
 
-                // --- BASIC INFORMATION ---
+                // ======================
+                // BASIC INFORMATION
+                // ======================
                 _buildSectionTitle('Basic Information'),
                 const SizedBox(height: 8),
                 Card(
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: Column(
                     children: [
                       _buildListTile(
@@ -73,20 +82,63 @@ class ProfilePage extends ConsumerWidget {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 24),
 
-                // --- APP SETTINGS ---
+                // ======================
+                // 🔒 ADMIN PANEL (OPTION B)
+                // ======================
+                if (profile.isAdmin) ...[
+                  _buildSectionTitle('Administration'),
+                  const SizedBox(height: 8),
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.admin_panel_settings,
+                        color: Color(0xFF3470D9),
+                      ),
+                      title: const Text(
+                        'Admin Panel',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: const Text(
+                          'Manage staff & approve leave'),
+                      trailing:
+                          const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AdminHome(
+                              companyId: profile.companyId,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // ======================
+                // APP SETTINGS
+                // ======================
                 _buildSectionTitle('App Settings'),
                 const SizedBox(height: 8),
                 Card(
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: Column(
                     children: [
                       SwitchListTile(
                         title: const Text('Notifications'),
-                        secondary: const Icon(Icons.notifications_outlined),
-                        value: true, // Mock value
+                        secondary: const Icon(
+                            Icons.notifications_outlined),
+                        value: true,
                         onChanged: (val) {
                           // TODO: Implement notification toggle
                         },
@@ -94,17 +146,24 @@ class ProfilePage extends ConsumerWidget {
                       _buildDivider(),
                       SwitchListTile(
                         title: const Text('Dark Mode'),
-                        secondary: const Icon(Icons.dark_mode_outlined),
+                        secondary: const Icon(
+                            Icons.dark_mode_outlined),
                         value: isDarkMode,
                         onChanged: (val) {
-                          ref.read(themeProvider.notifier).toggleTheme(val);
+                          ref
+                              .read(themeProvider.notifier)
+                              .toggleTheme(val);
                         },
                       ),
                       _buildDivider(),
                       ListTile(
-                        leading: const Icon(Icons.lock_outline),
-                        title: const Text('Change Password'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        leading:
+                            const Icon(Icons.lock_outline),
+                        title:
+                            const Text('Change Password'),
+                        trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16),
                         onTap: () {
                           _showChangePasswordDialog(context);
                         },
@@ -114,24 +173,28 @@ class ProfilePage extends ConsumerWidget {
                 ),
 
                 const SizedBox(height: 32),
+
+                // ======================
+                // LOG OUT
+                // ======================
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       await FirebaseAuth.instance.signOut();
-                      if (context.mounted) {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (context) => const LoginPage()),
-                          (route) => false,
-                        );
-                      }
                     },
-                    icon: const Icon(Icons.logout, color: Colors.red),
-                    label: const Text('Log Out', style: TextStyle(color: Colors.red)),
+                    icon: const Icon(Icons.logout,
+                        color: Colors.red),
+                    label: const Text(
+                      'Log Out',
+                      style: TextStyle(color: Colors.red),
+                    ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Colors.red),
+                      padding:
+                          const EdgeInsets.symmetric(
+                              vertical: 16),
+                      side: const BorderSide(
+                          color: Colors.red),
                     ),
                   ),
                 ),
@@ -139,12 +202,13 @@ class ProfilePage extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
       ),
     );
   }
 
+  // ======================
+  // HELPER WIDGETS
+  // ======================
   Widget _buildHeader(profile) {
     return Row(
       children: [
@@ -155,27 +219,35 @@ class ProfilePage extends ConsumerWidget {
               ? NetworkImage(profile.profilePictureUrl!)
               : null,
           child: profile.profilePictureUrl == null
-              ? const Icon(Icons.person, size: 40, color: Colors.white)
+              ? const Icon(Icons.person,
+                  size: 40, color: Colors.white)
               : null,
         ),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
               Text(
                 profile.fullName,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               Text(
                 profile.designation,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
+                style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey),
               ),
               const SizedBox(height: 4),
               Text(
                 'Staff ID: ${profile.employeeId}',
-                style: const TextStyle(fontSize: 14, color: Colors.blueGrey),
+                style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.blueGrey),
               ),
             ],
           ),
@@ -187,29 +259,49 @@ class ProfilePage extends ConsumerWidget {
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      style: const TextStyle(
+          fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
 
-  Widget _buildListTile(BuildContext context, {required IconData icon, required String title, required String subtitle}) {
+  Widget _buildListTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
     return ListTile(
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-      title: Text(title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+      leading: Icon(icon,
+          color:
+              Theme.of(context).colorScheme.primary),
+      title: Text(
+        title,
+        style: Theme.of(context)
+            .textTheme
+            .bodyMedium
+            ?.copyWith(color: Colors.grey),
+      ),
       subtitle: Text(
         subtitle,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
+        style: Theme.of(context)
+            .textTheme
+            .titleMedium
+            ?.copyWith(fontWeight: FontWeight.w500),
       ),
     );
   }
 
   Widget _buildDivider() {
-    return const Divider(height: 1, thickness: 0.5, indent: 16, endIndent: 16);
+    return const Divider(
+        height: 1,
+        thickness: 0.5,
+        indent: 16,
+        endIndent: 16);
   }
 
   void _showChangePasswordDialog(BuildContext context) {
-    final email = FirebaseAuth.instance.currentUser?.email;
+    final email =
+        FirebaseAuth.instance.currentUser?.email;
     if (email == null) return;
 
     showDialog(
@@ -217,7 +309,7 @@ class ProfilePage extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Change Password'),
         content: Text(
-            'We will send a password reset link to your email:\n$email\n\nDo you want to proceed?'),
+            'We will send a password reset link to:\n$email\n\nProceed?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -227,16 +319,24 @@ class ProfilePage extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                await FirebaseAuth.instance
+                    .sendPasswordResetEmail(
+                        email: email);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Password reset email sent!')),
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                    const SnackBar(
+                        content: Text(
+                            'Password reset email sent')),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
-                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                    SnackBar(
+                        content:
+                            Text('Error: $e')),
                   );
                 }
               }
