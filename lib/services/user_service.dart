@@ -1,50 +1,77 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_profile.dart';
 
 class UserService {
-  final _db = FirebaseFirestore.instance;
-  final _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Fetches the profile from users/{uid}. 
-  /// Optimized for ClockEase and ensures auto-creation.
-  Future<UserProfile?> getEmployeeProfile() async {
-    final user = _auth.currentUser;
-    if (user == null) return null;
+  // ============================================================
+  // FETCH PROFILE ONCE (used by some pages)
+  // ============================================================
+  Future<UserProfile?> getEmployeeProfile(String uid) async {
+    // 🔍 Search employee across companies
+    final companiesSnap = await _db.collection('companies').get();
 
-    final docRef = _db.collection("users").doc(user.uid);
-    final docSnap = await docRef.get();
+    for (final company in companiesSnap.docs) {
+      final empRef = _db
+          .collection('companies')
+          .doc(company.id)
+          .collection('employees')
+          .doc(uid);
 
-    if (docSnap.exists) {
-      return UserProfile.fromMap(user.uid, docSnap.data()!);
-    } else {
-      // Auto-create missing profile safely (Idempotent)
-      final newProfile = {
-        'fullName': user.displayName ?? 'New User',
-        'email': user.email ?? '',
-        'designation': 'Employee',
-        'employeeId': 'N/A',
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-      
-      await docRef.set(newProfile, SetOptions(merge: true));
-      
-      // Return the newly created profile (or refetch)
-      final finalSnap = await docRef.get();
-      return UserProfile.fromMap(user.uid, finalSnap.data()!);
+      final empSnap = await empRef.get();
+
+      if (empSnap.exists && empSnap.data() != null) {
+        return UserProfile.fromMap(uid, empSnap.data()!);
+      }
     }
+
+    // ❌ Profile must exist
+    return null;
   }
 
-  /// Reactive stream for real-time profile updates
-  Stream<UserProfile?> getUserProfileStream() {
-    final user = _auth.currentUser;
-    if (user == null) return Stream.value(null);
+  // ============================================================
+  // STREAM PROFILE (REAL-TIME, AUTH-SAFE)
+  // ============================================================
+  Stream<UserProfile?> getEmployeeProfileStream(String uid) {
+    return _db.collection('companies').snapshots().asyncMap(
+      (companiesSnap) async {
+        for (final company in companiesSnap.docs) {
+          final empRef = _db
+              .collection('companies')
+              .doc(company.id)
+              .collection('employees')
+              .doc(uid);
 
-    return _db.collection("users").doc(user.uid).snapshots().map((snapshot) {
-      if (snapshot.exists && snapshot.data() != null) {
-        return UserProfile.fromMap(user.uid, snapshot.data()!);
+          final empSnap = await empRef.get();
+
+          if (empSnap.exists && empSnap.data() != null) {
+            return UserProfile.fromMap(uid, empSnap.data()!);
+          }
+        }
+        return null;
+      },
+    );
+  }
+
+  // ============================================================
+  // OPTIONAL: GET COMPANY ID FOR CURRENT USER
+  // (VERY USEFUL FOR ADMIN ROUTING)
+  // ============================================================
+  Future<String?> getCompanyIdForUser(String uid) async {
+    final companiesSnap = await _db.collection('companies').get();
+
+    for (final company in companiesSnap.docs) {
+      final empSnap = await _db
+          .collection('companies')
+          .doc(company.id)
+          .collection('employees')
+          .doc(uid)
+          .get();
+
+      if (empSnap.exists) {
+        return company.id;
       }
-      return null;
-    });
+    }
+    return null;
   }
 }

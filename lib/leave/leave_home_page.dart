@@ -31,17 +31,17 @@ class _LeavePageState extends State<LeavePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Leave Application",
-          style: TextStyle(color: Color(0xFF3F51B5)), // Apply color to text
+          style: TextStyle(color: Theme.of(context).colorScheme.primary),
         ),
-        backgroundColor: Colors.white, // Set background to white
-        elevation: 0, // Remove shadow for a clean look
+        // backgroundColor: Use theme default
+        elevation: 0,
         actions: [
           IconButton(
             icon: Icon(
               Icons.notifications,
-              color: Color(0xFF3F51B5), // Change icon color to match text
+              color: Theme.of(context).colorScheme.primary,
             ),
             onPressed: () {
               // Handle notifications if any
@@ -285,7 +285,11 @@ class _LeavePageState extends State<LeavePage> {
         children: [
           Text(
             "Upcoming Leave",
-            style: TextStyle(color: Color(0xFF3BAECC), fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 10),
           SizedBox(
@@ -509,7 +513,11 @@ class _LeavePageState extends State<LeavePage> {
         children: [
           Text(
             "Past Leave",
-            style: TextStyle(color: Color(0xFF3BAECC), fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 10),
           SizedBox(

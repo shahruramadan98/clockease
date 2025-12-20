@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../models/user_profile.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../controllers/user_provider.dart';
 
-class GreetingCard extends StatelessWidget {
-  final UserProfile? profile;
-
-  const GreetingCard({
-    super.key,
-    required this.profile,
-  });
+class GreetingCard extends ConsumerWidget {
+  const GreetingCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userData = ref.watch(userProvider);
+
     final now = DateTime.now();
     final hour = now.hour;
 
@@ -23,23 +21,23 @@ class GreetingCard extends StatelessWidget {
     final date =
         "${_weekday(now.weekday)}, ${now.day} ${_month(now.month)}";
 
-    final formattedTime = _formatTime(now);
+    final formattedTime = _formatTime(now); 
 
-    final name = profile?.fullName ?? "User";
-
-    return _buildCard(greeting, name, date, formattedTime);
+    return userData.when(
+      loading: () => _buildCard(greeting, "Loading...", date, formattedTime),
+      error: (_, __) => _buildCard(greeting, "User", date, formattedTime),
+      data: (user) => _buildCard(
+        greeting,
+        user?.fullName ?? "User",
+        date,
+        formattedTime,
+      ),
+    );
   }
 }
 
-// =========================
-// UI CARD
-// =========================
-Widget _buildCard(
-  String greeting,
-  String name,
-  String date,
-  String time,
-) {
+// UPDATED to include time
+Widget _buildCard(String greeting, String name, String date, String time) {
   return Container(
     padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
@@ -69,19 +67,13 @@ Widget _buildCard(
               // DATE
               Text(
                 date,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.white,
-                ),
+                style: const TextStyle(fontSize: 14, color: Colors.white),
               ),
 
               // TIME
               Text(
                 time,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.white70,
-                ),
+                style: const TextStyle(fontSize: 14, color: Colors.white70),
               ),
             ],
           ),
@@ -114,40 +106,23 @@ Widget _buildCard(
   );
 }
 
-// =========================
-// HELPERS
-// =========================
 String _weekday(int weekday) {
   const names = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday"
+    "Monday", "Tuesday", "Wednesday",
+    "Thursday", "Friday", "Saturday", "Sunday"
   ];
   return names[weekday - 1];
 }
 
 String _month(int month) {
   const names = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December"
+    "January","February","March","April","May","June",
+    "July","August","September","October","November","December"
   ];
   return names[month - 1];
 }
 
+// NEW TIME FORMAT FUNCTION
 String _formatTime(DateTime time) {
   final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
   final minute = time.minute.toString().padLeft(2, '0');

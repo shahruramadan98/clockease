@@ -31,7 +31,7 @@ class AttendancePage extends ConsumerWidget {
     final attendanceState = ref.watch(attendanceProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      // backgroundColor: Use theme default
       
 
       body: attendanceState.when(
@@ -112,24 +112,24 @@ class AttendancePage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // PAGE TITLE
-                const Text(
+                Text(
                   "Attendance History",
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF3F51B5),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
                 // MONTHLY SUMMARY TITLE
-                const Text(
+                Text(
                   "Monthly Summaries",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF3F51B5),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
 
@@ -170,12 +170,12 @@ class AttendancePage extends ConsumerWidget {
 
                 const SizedBox(height: 24),
 
-                const Text(
+                Text(
                   "Daily Attendance",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF3F51B5),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
 

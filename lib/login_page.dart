@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'signup/signup_company_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -27,24 +29,56 @@ class _LoginPageState extends State<LoginPage> {
 
     if (email.isEmpty || password.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Fill all fields')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Fill all fields')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // Firebase Auth login (PERSON account)
+      UserCredential credential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      final uid = credential.user!.uid;
+
+      // Find employee record across companies
+      final companiesSnapshot =
+          await FirebaseFirestore.instance.collection('companies').get();
+
+      DocumentSnapshot? employeeDoc;
+      String? companyId;
+
+      for (var company in companiesSnapshot.docs) {
+        final doc = await FirebaseFirestore.instance
+            .collection('companies')
+            .doc(company.id)
+            .collection('employees')
+            .doc(uid)
+            .get();
+
+        if (doc.exists) {
+          employeeDoc = doc;
+          companyId = company.id;
+          break;
+        }
+      }
+
+      if (employeeDoc == null || companyId == null) {
+        throw Exception('Employee record not found');
+      }
+
+      // OPTIONAL: extract permissions (used later in app)
+      final bool isAdmin = employeeDoc['isAdmin'] == true;
+
+      // (Later you can store this in Riverpod / Provider)
+      debugPrint('Login success → companyId=$companyId, isAdmin=$isAdmin');
+
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('✅ Login successful')));
         Navigator.pushReplacementNamed(context, '/home');
       }
     } on FirebaseAuthException catch (e) {
@@ -52,26 +86,25 @@ class _LoginPageState extends State<LoginPage> {
       if (e.code == 'user-not-found') {
         message = 'No user found for that email.';
       } else if (e.code == 'wrong-password') {
-        message = 'Wrong password. Try again.';
+        message = 'Wrong password.';
       } else {
         message = e.message ?? 'Authentication error.';
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('❌ $message')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('❌ $message')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('⚠️ ${e.toString()}')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('⚠️ ${e.toString()}')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +152,6 @@ class _LoginPageState extends State<LoginPage> {
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
                     ),
                   ),
                   Container(

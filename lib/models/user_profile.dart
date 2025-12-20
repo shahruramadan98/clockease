@@ -5,7 +5,12 @@ class UserProfile {
   final String fullName;
   final String email;
   final String employeeId;
-  final String designation; // Role
+  final String designation;
+
+  // 🔹 NEW FIELDS
+  final bool isAdmin;
+  final String companyId;
+
   final String? phoneNumber;
   final String? gender;
   final String? profilePictureUrl;
@@ -17,6 +22,8 @@ class UserProfile {
     required this.email,
     required this.employeeId,
     required this.designation,
+    required this.isAdmin,
+    required this.companyId,
     this.phoneNumber,
     this.gender,
     this.profilePictureUrl,
@@ -30,10 +37,17 @@ class UserProfile {
       email: data['email'] ?? '',
       employeeId: data['employeeId'] ?? 'N/A',
       designation: data['designation'] ?? 'Employee',
+
+      // 🔹 NEW MAPPINGS
+      isAdmin: data['isAdmin'] ?? false,
+      companyId: data['companyId'] ?? '',
+
       phoneNumber: data['phoneNumber'],
       gender: data['gender'],
       profilePictureUrl: data['profilePictureUrl'],
-      createdAt: data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate() : null,
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : null,
     );
   }
 
@@ -43,10 +57,16 @@ class UserProfile {
       'email': email,
       'employeeId': employeeId,
       'designation': designation,
+
+      // 🔹 NEW FIELDS
+      'isAdmin': isAdmin,
+      'companyId': companyId,
+
       'phoneNumber': phoneNumber,
       'gender': gender,
       'profilePictureUrl': profilePictureUrl,
-      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
+      'createdAt':
+          createdAt != null ? Timestamp.fromDate(createdAt!) : null,
     };
   }
 }
