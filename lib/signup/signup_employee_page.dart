@@ -25,6 +25,7 @@ class _SignUpEmployeePageState extends State<SignUpEmployeePage> {
   final _designationController = TextEditingController();
 
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   Future<void> _submitAdminSignup() async {
     if (!_formKey.currentState!.validate()) return;
@@ -143,10 +144,21 @@ class _SignUpEmployeePageState extends State<SignUpEmployeePage> {
 
                     TextFormField(
                       controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
                         hintText: 'Password',
-                        border: UnderlineInputBorder(),
+                        border: const UnderlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
                       ),
                       validator: (v) =>
                           v!.length < 6 ? 'Minimum 6 characters' : null,

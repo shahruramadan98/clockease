@@ -7,7 +7,9 @@ import 'widgets/clock_card.dart';
 import 'widgets/quick_action_card.dart';
 
 class Dashboard extends ConsumerWidget {
-  const Dashboard({super.key});
+  final Function(int)? onNavigateToTab;
+  
+  const Dashboard({super.key, this.onNavigateToTab});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,7 +24,6 @@ class Dashboard extends ConsumerWidget {
       ),
       data: (profile) {
         return Scaffold(
-          backgroundColor: Colors.white,
           body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
@@ -50,7 +51,7 @@ class Dashboard extends ConsumerWidget {
                   const SizedBox(height: 15),
 
                   Row(
-                    children: const [
+                    children: [
                       Expanded(
                         child: QuickActionCard(
                           title: "Today’s Schedule",
@@ -58,12 +59,16 @@ class Dashboard extends ConsumerWidget {
                           icon: Icons.calendar_month,
                         ),
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: QuickActionCard(
                           title: "Leave Balance",
                           subtitle: "Annual: 15 days",
                           icon: Icons.eco,
+                          onTap: () {
+                            // Navigate to Leaves page (index 1)
+                            onNavigateToTab?.call(1);
+                          },
                         ),
                       ),
                     ],
@@ -72,12 +77,18 @@ class Dashboard extends ConsumerWidget {
                   const SizedBox(height: 20),
 
                   Center(
-                    child: Text(
-                      "View today’s attendance details →",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w500,
+                    child: GestureDetector(
+                      onTap: () {
+                        // Navigate to Attendance page (index 0)
+                        onNavigateToTab?.call(0);
+                      },
+                      child: Text(
+                        "View today’s attendance details →",
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),

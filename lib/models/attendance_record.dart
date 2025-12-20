@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'attendance_status.dart';
+import 'attendance_status_calculator.dart';
 
 class AttendanceRecord {
   final DateTime date;
@@ -21,11 +22,6 @@ class AttendanceRecord {
   String get dateString => "${date.day}-${date.month}-${date.year}";
 
   factory AttendanceRecord.fromMap(Map<String, dynamic> map) {
-    // 1. CONSTANTS (Static Schedule)
-    const int workStartHour = 8;
-    // const int workEndHour = 17; // 5 PM
-    const Duration breakDuration = Duration(hours: 1);
-
     // --- SAFE PARSING FOR DATE ---
     DateTime _parseDate(dynamic value) {
       if (value == null) return DateTime.now();
@@ -46,47 +42,17 @@ class AttendanceRecord {
     final clockIn = _parseNullableDate(map['checkIn']);
     final clockOut = _parseNullableDate(map['checkOut']);
 
-    // 3. DYNAMIC CALCULATIONS (Logic Separation)
-
-    // A. Status & Late Duration
-    AttendanceStatus status = AttendanceStatus.absent; // default
-    Duration lateDuration = Duration.zero;
-
-    if (clockIn != null) {
-      // Create "8:00 AM" for the *same day* as the clockIn
-      final scheduledStart = DateTime(
-        clockIn.year,
-        clockIn.month,
-        clockIn.day,
-        workStartHour,
-        0,
-      );
-
-      // On Time → check-in time <= 8:00 AM
-      // Late → check-in time > 8:00 AM
-      if (clockIn.isAfter(scheduledStart)) {
-        status = AttendanceStatus.late;
-        lateDuration = clockIn.difference(scheduledStart);
-      } else {
-        status = AttendanceStatus.onTime;
-        lateDuration = Duration.zero;
-      }
-    } else {
-      status = AttendanceStatus.absent;
-    }
-
     // B. Total Working Hours
-    Duration totalHours = Duration.zero;
-    if (clockIn != null && clockOut != null) {
-      final rawDuration = clockOut.difference(clockIn);
-      // Formula: (checkOut - checkIn) - breakTime
-      totalHours = rawDuration - breakDuration;
-      
-      // Prevent negative hours
-      if (totalHours.isNegative) {
-        totalHours = Duration.zero;
-      }
-    }
+    final totalHours = AttendanceStatusCalculator.calculateTotalHours(
+      clockIn,
+      clockOut,
+    );
+
+    // C. Status & Late Duration
+    final statusResult = AttendanceStatusCalculator.calculateStatus(clockIn);
+    final status = statusResult['status'] as AttendanceStatus;
+    final lateDuration = statusResult['lateDuration'] as Duration;
+
 
     // Override status for half-day or absent logic if needed, 
     // but user requested STRICT simpler logic for now.

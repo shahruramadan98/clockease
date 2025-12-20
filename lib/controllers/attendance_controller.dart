@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/attendance_record.dart';
 import '../models/attendance_log.dart';
 import '../models/attendance_status.dart';
+import '../models/attendance_status_calculator.dart';
 import '../services/firestore_service.dart';
 
 final attendanceProvider = StreamProvider.autoDispose<List<AttendanceRecord>>((ref) {
@@ -57,39 +58,18 @@ List<AttendanceRecord> _groupLogsByDate(List<AttendanceLog> logs) {
       int.parse(dateParts[2]),
     );
     
-    // Calculate total hours
-    Duration totalHours = Duration.zero;
-    const Duration breakDuration = Duration(hours: 1);
+    // Calculate total hours using shared calculator
+    final totalHours = AttendanceStatusCalculator.calculateTotalHours(
+      clockIn,
+      clockOut,
+    );
+
     
-    if (clockIn != null && clockOut != null) {
-      final rawDuration = clockOut.difference(clockIn);
-      totalHours = rawDuration - breakDuration;
-      if (totalHours.isNegative) {
-        totalHours = Duration.zero;
-      }
-    }
-    
-    // Calculate status and late duration
-    AttendanceStatus status = AttendanceStatus.absent;
-    Duration lateDuration = Duration.zero;
-    
-    if (clockIn != null) {
-      // Check if late (after 8:00 AM)
-      final scheduledStart = DateTime(
-        clockIn.year,
-        clockIn.month,
-        clockIn.day,
-        8, // 8:00 AM
-        0,
-      );
-      
-      if (clockIn.isAfter(scheduledStart)) {
-        status = AttendanceStatus.late;
-        lateDuration = clockIn.difference(scheduledStart);
-      } else {
-        status = AttendanceStatus.onTime;
-      }
-    }
+    // Calculate status and late duration using shared calculator
+    final statusResult = AttendanceStatusCalculator.calculateStatus(clockIn);
+    final status = statusResult['status'] as AttendanceStatus;
+    final lateDuration = statusResult['lateDuration'] as Duration;
+
     
     records.add(AttendanceRecord(
       date: date,

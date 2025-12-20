@@ -33,9 +33,15 @@ class UserService {
   // STREAM PROFILE (REAL-TIME, AUTH-SAFE)
   // ============================================================
   Stream<UserProfile?> getEmployeeProfileStream(String uid) {
+    print('🔍 getEmployeeProfileStream called for UID: $uid');
+    
     return _db.collection('companies').snapshots().asyncMap(
       (companiesSnap) async {
+        print('📦 Found ${companiesSnap.docs.length} companies');
+        
         for (final company in companiesSnap.docs) {
+          print('🏢 Checking company: ${company.id}');
+          
           final empRef = _db
               .collection('companies')
               .doc(company.id)
@@ -43,11 +49,15 @@ class UserService {
               .doc(uid);
 
           final empSnap = await empRef.get();
+          print('👤 Employee exists in ${company.id}: ${empSnap.exists}');
 
           if (empSnap.exists && empSnap.data() != null) {
+            print('✅ Found profile in company: ${company.id}');
             return UserProfile.fromMap(uid, empSnap.data()!);
           }
         }
+        
+        print('❌ No profile found for UID: $uid');
         return null;
       },
     );
@@ -73,5 +83,28 @@ class UserService {
       }
     }
     return null;
+  }
+
+  // ============================================================
+  // UPDATE EMPLOYEE PROFILE
+  // ============================================================
+  Future<void> updateEmployeeProfile(
+    String uid,
+    String companyId,
+    Map<String, dynamic> updates,
+  ) async {
+    try {
+      final empRef = _db
+          .collection('companies')
+          .doc(companyId)
+          .collection('employees')
+          .doc(uid);
+
+      await empRef.update(updates);
+      print('✅ Profile updated successfully for UID: $uid');
+    } catch (e) {
+      print('❌ Error updating profile: $e');
+      rethrow;
+    }
   }
 }

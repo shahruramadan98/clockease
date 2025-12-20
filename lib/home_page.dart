@@ -25,7 +25,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     final screens = [
       AttendancePage(),
       LeavePage(),
-      const Dashboard(),
+      Dashboard(
+        onNavigateToTab: (index) {
+          setState(() => _currentIndex = index);
+        },
+      ),
       const InsightsPage(),
       const ProfilePage(),
     ];

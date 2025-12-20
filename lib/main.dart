@@ -24,6 +24,10 @@ void main() async {
     }
   }
 
+  // 🔥 DEV MODE: Auto sign-out on app start to always begin at login page
+  // TODO: Remove this line before production deployment
+  await FirebaseAuth.instance.signOut();
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -35,14 +39,26 @@ class MyApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
-  Widget build(BuildContext context) {
-    return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'ClockEase',
-      home: AuthWrapper(),
+      themeMode: themeMode,
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      home: const AuthWrapper(),
+      // 🔥 Named routes for navigation
+      routes: {
+        '/home': (context) => const HomePage(),
+      },
+      // 🔥 Safety net: redirect unknown routes to login
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => const LoginPage(),
+        );
+      },
     );
   }
 }
+
 
 /// ======================================================
 /// 🔥 AUTH WRAPPER (CRITICAL FIX)
