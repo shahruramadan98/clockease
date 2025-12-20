@@ -23,7 +23,10 @@ class _LeavePageState extends State<LeavePage> {
   }
 
   String _formatDate(DateTime date) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
@@ -31,24 +34,14 @@ class _LeavePageState extends State<LeavePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           "Leave Application",
-          style: TextStyle(color: Theme.of(context).colorScheme.primary),
+          style: TextStyle(color: Color(0xFF3F51B5), fontWeight: FontWeight.bold),
         ),
-        // backgroundColor: Use theme default
+        backgroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.notifications,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            onPressed: () {
-              // Handle notifications if any
-            },
-          ),
-        ],
       ),
+
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _leaveService.getUserLeaves(),
         builder: (context, snapshot) {
@@ -56,171 +49,136 @@ class _LeavePageState extends State<LeavePage> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          final leaves = snapshot.data ?? [];
+          if (leaves.isEmpty) {
             return _buildEmptyState();
           }
 
-          final leaves = snapshot.data!;
           final now = DateTime.now();
 
-          // Calculate leave balances
           int usedAnnual = 0;
           int usedSick = 0;
 
-          // Categorize leaves
-          final List<Map<String, dynamic>> upcomingLeaves = [];
-          final List<Map<String, dynamic>> pendingLeaves = [];
-          final List<Map<String, dynamic>> pastLeaves = [];
+          final upcomingLeaves = <Map<String, dynamic>>[];
+          final pendingLeaves = <Map<String, dynamic>>[];
+          final pastLeaves = <Map<String, dynamic>>[];
 
-          for (var leave in leaves) {
+          for (final leave in leaves) {
             final startDate = (leave['startDate'] as Timestamp).toDate();
             final endDate = (leave['endDate'] as Timestamp).toDate();
             final status = leave['status'] as String;
             final days = calculateDays(startDate, endDate);
 
-            // Calculate used leave days
             if (status == 'approved') {
               if (leave['leaveType'] == 'Annual') usedAnnual += days;
               if (leave['leaveType'] == 'Sick') usedSick += days;
             }
 
-            // Categorize leaves
             if (status == 'pending') {
               pendingLeaves.add(leave);
-            } else if (status == 'approved' && endDate.isAfter(now.subtract(const Duration(days: 1)))) {
+            } else if (status == 'approved' &&
+                endDate.isAfter(now.subtract(const Duration(days: 1)))) {
               upcomingLeaves.add(leave);
-            } else if ((status == 'approved' || status == 'rejected') && 
-                       endDate.isBefore(now.subtract(const Duration(days: 1)))) {
+            } else {
               pastLeaves.add(leave);
             }
           }
 
-          // Sort upcoming by start date (earliest first)
-          upcomingLeaves.sort((a, b) {
-            final aDate = (a['startDate'] as Timestamp).toDate();
-            final bDate = (b['startDate'] as Timestamp).toDate();
-            return aDate.compareTo(bDate);
-          });
+          upcomingLeaves.sort((a, b) =>
+              (a['startDate'] as Timestamp)
+                  .toDate()
+                  .compareTo((b['startDate'] as Timestamp).toDate()));
 
-          // Sort past by end date (most recent first)
-          pastLeaves.sort((a, b) {
-            final aDate = (a['endDate'] as Timestamp).toDate();
-            final bDate = (b['endDate'] as Timestamp).toDate();
-            return bDate.compareTo(aDate);
-          });
+          pastLeaves.sort((a, b) =>
+              (b['endDate'] as Timestamp)
+                  .toDate()
+                  .compareTo((a['endDate'] as Timestamp).toDate()));
 
           final remainingAnnual = annualTotal - usedAnnual;
           final remainingSick = sickTotal - usedSick;
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Leave Balances Section
-                  _buildLeaveBalancesSection(remainingAnnual, remainingSick),
-
-                  const SizedBox(height: 20),
-
-                  // Upcoming Leave Section
-                  _buildUpcomingLeaveSection(upcomingLeaves),
-
-                  const SizedBox(height: 20),
-
-                  // Pending Requests Section
-                  _buildPendingLeaveSection(pendingLeaves),
-
-                  const SizedBox(height: 20),
-
-                  // Past Leave Section
-                  _buildPastLeaveSection(pastLeaves),
-
-                  const SizedBox(height: 80), // Add bottom padding for FAB
-                ],
-              ),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildLeaveBalancesSection(remainingAnnual, remainingSick),
+                const SizedBox(height: 20),
+                _buildUpcomingLeaveSection(upcomingLeaves),
+                const SizedBox(height: 20),
+                _buildPendingLeaveSection(pendingLeaves),
+                const SizedBox(height: 20),
+                _buildPastLeaveSection(pastLeaves),
+                const SizedBox(height: 80),
+              ],
             ),
           );
         },
       ),
+
       floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF3BAECC),
+        child: const Icon(Icons.add, color: Colors.white),
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const LeaveApplicationForm(),
+              builder: (_) => const LeaveApplicationForm(),
             ),
           );
         },
-        backgroundColor: const Color(0xFF3BAECC),
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-        ),
       ),
-
     );
   }
 
+  // =============================
+  // EMPTY STATE
+  // =============================
   Widget _buildEmptyState() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildLeaveBalancesSection(annualTotal, sickTotal),
-            const SizedBox(height: 20),
-            _buildUpcomingLeaveSection([]),
-            const SizedBox(height: 20),
-            _buildPendingLeaveSection([]),
-            const SizedBox(height: 20),
-            _buildPastLeaveSection([]),
-            const SizedBox(height: 80), // Add bottom padding for FAB
-          ],
-
-        ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildLeaveBalancesSection(annualTotal, sickTotal),
+          const SizedBox(height: 20),
+          _buildEmptySection("Upcoming Leave", "No upcoming leave"),
+          const SizedBox(height: 20),
+          _buildEmptySection("Pending Requests", "No pending requests"),
+          const SizedBox(height: 20),
+          _buildEmptySection("Past Leave", "No past leave"),
+        ],
       ),
     );
   }
 
-
-  // Leave Balances Section
-  Widget _buildLeaveBalancesSection(int remainingAnnual, int remainingSick) {
+  // =============================
+  // LEAVE BALANCES
+  // =============================
+  Widget _buildLeaveBalancesSection(int annual, int sick) {
     return Card(
-      elevation: 6,
       color: const Color(0xFF3BAECC),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               "Leave Balances",
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              style: TextStyle(
                 color: Colors.white,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 12),
+            _balanceItem("Annual Leave", annual, annual / annualTotal),
             const SizedBox(height: 10),
-            // Annual Leave Progress Bar
-            _buildLeaveBalanceCard(
-              "Annual Leave",
-              remainingAnnual,
-              remainingAnnual / annualTotal,
-              true,
-            ),
-            const SizedBox(height: 10),
-            // Line separator between the sections
-            Divider(
-              color: Colors.white.withOpacity(0.5),
-            ),
-            // Sick Leave and Unpaid Leave without progress bar
+            Divider(color: Colors.white.withOpacity(0.5)),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildLeaveBalanceCard("Sick Leave", remainingSick, 0.0, false),
-                _buildLeaveBalanceCard("Unpaid Leave", 0, 0.0, false),
+                _simpleBalance("Sick Leave", sick),
+                _simpleBalance("Unpaid Leave", 0),
               ],
             ),
           ],
@@ -229,497 +187,274 @@ class _LeavePageState extends State<LeavePage> {
     );
   }
 
-  Widget _buildLeaveBalanceCard(String leaveType, int daysLeft, double progress, bool showProgress) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(
-            leaveType,
-            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "$daysLeft days",
-            style: const TextStyle(color: Colors.white),
-          ),
-          const SizedBox(height: 4),
-          if (showProgress)
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.white.withOpacity(0.3),
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              minHeight: 8.0,
-            ),
-        ],
-      ),
+  Widget _balanceItem(String label, int days, double progress) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("$label ($days days)",
+            style: const TextStyle(color: Colors.white)),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(
+          value: progress.clamp(0, 1),
+          backgroundColor: Colors.white24,
+          valueColor: const AlwaysStoppedAnimation(Colors.white),
+        ),
+      ],
     );
   }
 
-
-  // Upcoming Leave Section
-  Widget _buildUpcomingLeaveSection(List<Map<String, dynamic>> upcomingLeaves) {
-    if (upcomingLeaves.isEmpty) {
-      return _buildEmptySectionCard("Upcoming Leave", "No upcoming leave");
-    }
-
-    final nextLeave = upcomingLeaves.first;
-    final leaveType = nextLeave['leaveType'] as String;
-    final startDate = (nextLeave['startDate'] as Timestamp).toDate();
-    final endDate = (nextLeave['endDate'] as Timestamp).toDate();
-    
-    final dateStr = startDate.day == endDate.day && 
-                    startDate.month == endDate.month && 
-                    startDate.year == endDate.year
-        ? _formatDate(startDate)
-        : '${_formatDate(startDate)} - ${_formatDate(endDate)}';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Upcoming Leave",
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            height: 90,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF6BD5E1),
-                    Color(0xFF3A7BD5),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          leaveType,
-                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          dateStr,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      "Approved",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+  Widget _simpleBalance(String label, int days) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(color: Colors.white)),
+        const SizedBox(height: 4),
+        Text("$days days", style: const TextStyle(color: Colors.white)),
+      ],
     );
   }
 
-
-
-  // Pending Leave Section
-  Widget _buildPendingLeaveSection(List<Map<String, dynamic>> pendingLeaves) {
-    if (pendingLeaves.isEmpty) {
-      return _buildEmptySectionCard("Pending Requests", "No pending requests");
+  // =============================
+  // UPCOMING
+  // =============================
+  Widget _buildUpcomingLeaveSection(List<Map<String, dynamic>> leaves) {
+    if (leaves.isEmpty) {
+      return _buildEmptySection("Upcoming Leave", "No upcoming leave");
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Pending Requests",
-                style: TextStyle(color: Color(0xFF3BAECC), fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Color(0xFFB0F39A),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  "${pendingLeaves.length}",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
+    final leave = leaves.first;
+    return _leaveCard(
+      "Upcoming Leave",
+      leave,
+      "Approved",
+      Colors.green,
+    );
+  }
+
+  // =============================
+  // PENDING (with delete)
+  // =============================
+  Widget _buildPendingLeaveSection(List<Map<String, dynamic>> leaves) {
+    if (leaves.isEmpty) {
+      return _buildEmptySection("Pending Requests", "No pending requests");
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Pending Requests",
+          style: TextStyle(
+            color: Color(0xFF3BAECC),
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
-          const SizedBox(height: 10),
-          ...pendingLeaves.map((leave) => Padding(
+        ),
+        const SizedBox(height: 10),
+        ...leaves.map((leave) {
+          return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: _buildPendingLeaveCard(leave),
-          )),
-        ],
-      ),
+          );
+        }),
+      ],
     );
   }
 
   Widget _buildPendingLeaveCard(Map<String, dynamic> leave) {
-    final leaveType = leave['leaveType'] as String;
-    final startDate = (leave['startDate'] as Timestamp).toDate();
-    final endDate = (leave['endDate'] as Timestamp).toDate();
-    final leaveId = leave['id'] as String;
-    
-    final dateStr = startDate.day == endDate.day && 
-                    startDate.month == endDate.month && 
-                    startDate.year == endDate.year
-        ? _formatDate(startDate)
-        : '${_formatDate(startDate)} - ${_formatDate(endDate)}';
+    final leaveType = leave['leaveType'];
+    final start = (leave['startDate'] as Timestamp).toDate();
+    final end = (leave['endDate'] as Timestamp).toDate();
+    final leaveId = leave['id'];
 
-    return SizedBox(
-      width: double.infinity,
+    final date = start == end
+        ? _formatDate(start)
+        : "${_formatDate(start)} - ${_formatDate(end)}";
+
+    return Container(
       height: 90,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFF6BD5E1),
-              Color(0xFF3A7BD5),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(leaveType,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(date, style: const TextStyle(color: Colors.white)),
+            ],
+          ),
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  "Pending",
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () =>
+                    _showDeleteConfirmation(leaveId, leaveType, date),
+                child: const Icon(Icons.delete, color: Colors.white),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =============================
+  // PAST
+  // =============================
+  Widget _buildPastLeaveSection(List<Map<String, dynamic>> leaves) {
+    if (leaves.isEmpty) {
+      return _buildEmptySection("Past Leave", "No past leave");
+    }
+
+    final leave = leaves.first;
+    final status = leave['status'] == 'approved' ? "Taken" : "Rejected";
+    final color = leave['status'] == 'approved' ? Colors.grey : Colors.red;
+
+    return _leaveCard("Past Leave", leave, status, color);
+  }
+
+  Widget _leaveCard(
+    String title,
+    Map<String, dynamic> leave,
+    String status,
+    Color color,
+  ) {
+    final start = (leave['startDate'] as Timestamp).toDate();
+    final end = (leave['endDate'] as Timestamp).toDate();
+
+    final date = start == end
+        ? _formatDate(start)
+        : "${_formatDate(start)} - ${_formatDate(end)}";
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: const TextStyle(
+              color: Color(0xFF3BAECC),
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            )),
+        const SizedBox(height: 10),
+        Container(
+          height: 90,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    leaveType,
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(leave['leaveType'],
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text(
-                    dateStr,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(date,
+                      style: const TextStyle(color: Colors.white)),
                 ],
               ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Color(0xFFB0F39A),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    "Pending",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: () => _showDeleteConfirmation(leaveId, leaveType, dateStr),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline,
+                child: Text(
+                  status,
+                  style: const TextStyle(
                       color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
+                      fontWeight: FontWeight.bold),
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  // Past Leave Section
-  Widget _buildPastLeaveSection(List<Map<String, dynamic>> pastLeaves) {
-    if (pastLeaves.isEmpty) {
-      return _buildEmptySectionCard("Past Leave", "No past leave");
-    }
-
-    final recentPast = pastLeaves.first;
-    final leaveType = recentPast['leaveType'] as String;
-    final startDate = (recentPast['startDate'] as Timestamp).toDate();
-    final endDate = (recentPast['endDate'] as Timestamp).toDate();
-    final status = recentPast['status'] as String;
-    
-    final dateStr = startDate.day == endDate.day && 
-                    startDate.month == endDate.month && 
-                    startDate.year == endDate.year
-        ? _formatDate(startDate)
-        : '${_formatDate(startDate)} - ${_formatDate(endDate)}';
-
-    final statusText = status == 'approved' ? 'Taken' : 'Rejected';
-    final statusColor = status == 'approved' ? Colors.grey : Colors.red;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Past Leave",
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
+  Widget _buildEmptySection(String title, String text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: const TextStyle(
+              color: Color(0xFF3BAECC),
               fontSize: 20,
               fontWeight: FontWeight.bold,
-            ),
+            )),
+        const SizedBox(height: 10),
+        Container(
+          height: 90,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200,
+            borderRadius: BorderRadius.circular(8),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            height: 90,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF6BD5E1),
-                    Color(0xFF3A7BD5),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          leaveType,
-                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          dateStr,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      statusText,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+          child: Text(text, style: const TextStyle(color: Colors.grey)),
+        ),
+      ],
     );
   }
 
-  // Helper method for empty section cards
-  Widget _buildEmptySectionCard(String title, String message) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(color: Color(0xFF3BAECC), fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(16),
-            width: double.infinity,
-            height: 90,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.grey.shade200,
-            ),
-            child: Center(
-              child: Text(
-                message,
-                style: TextStyle(color: Colors.grey.shade600),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Delete confirmation dialog
-  void _showDeleteConfirmation(String leaveId, String leaveType, String dateStr) {
-    showDialog(
+  Future<void> _showDeleteConfirmation(
+      String id, String type, String date) async {
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+      builder: (_) => AlertDialog(
+        title: const Text("Delete Leave"),
+        content: Text("Delete $type ($date)?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
           ),
-          title: Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-              const SizedBox(width: 12),
-              const Text(
-                "Delete Leave?",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete"),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Are you sure you want to delete this leave request?",
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      leaveType,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      dateStr,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(
-                "Cancel",
-                style: TextStyle(color: Colors.grey.shade600),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(dialogContext).pop();
-                await _deleteLeave(leaveId);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text("Delete"),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
-  }
 
-  // Delete leave from Firestore
-  Future<void> _deleteLeave(String leaveId) async {
-    try {
+    if (confirm == true) {
       await FirebaseFirestore.instance
           .collection('leave_applications')
-          .doc(leaveId)
+          .doc(id)
           .delete();
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Leave request deleted successfully"),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to delete: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 }

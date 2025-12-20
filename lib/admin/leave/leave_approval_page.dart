@@ -16,7 +16,7 @@ class LeaveApprovalPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ==========================
-          // PAGE TITLE
+          // PAGE HEADER
           // ==========================
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
@@ -41,7 +41,7 @@ class LeaveApprovalPage extends StatelessWidget {
           ),
 
           // ==========================
-          // CONTENT
+          // LEAVE LIST
           // ==========================
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
@@ -71,18 +71,20 @@ class LeaveApprovalPage extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   itemCount: leaves.length,
                   itemBuilder: (context, index) {
-                    final leave = leaves[index];
+                    final doc = leaves[index];
+                    final data = doc.data() as Map<String, dynamic>;
+
                     final start =
-                        (leave['startDate'] as Timestamp).toDate();
+                        (data['startDate'] as Timestamp).toDate();
                     final end =
-                        (leave['endDate'] as Timestamp).toDate();
+                        (data['endDate'] as Timestamp).toDate();
 
                     return Card(
                       elevation: 3,
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
                         title: Text(
-                          leave['userName'],
+                          data['userName'] ?? 'Unknown',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                           ),
@@ -91,7 +93,7 @@ class LeaveApprovalPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${leave['leaveType']} • ID: ${leave['employeeId']}',
+                              '${data['leaveType']} • ID: ${data['employeeId']}',
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -104,22 +106,22 @@ class LeaveApprovalPage extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
+                              tooltip: 'Approve',
                               icon: const Icon(
                                 Icons.check_circle,
                                 color: Colors.green,
                               ),
-                              tooltip: 'Approve',
                               onPressed: () =>
-                                  _updateStatus(leave.reference, 'approved'),
+                                  _updateStatus(doc.reference, 'approved'),
                             ),
                             IconButton(
+                              tooltip: 'Reject',
                               icon: const Icon(
                                 Icons.cancel,
                                 color: Colors.redAccent,
                               ),
-                              tooltip: 'Reject',
                               onPressed: () =>
-                                  _updateStatus(leave.reference, 'rejected'),
+                                  _updateStatus(doc.reference, 'rejected'),
                             ),
                           ],
                         ),
@@ -136,7 +138,7 @@ class LeaveApprovalPage extends StatelessWidget {
   }
 
   // ==========================
-  // UPDATE STATUS
+  // UPDATE LEAVE STATUS
   // ==========================
   Future<void> _updateStatus(
     DocumentReference ref,

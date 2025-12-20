@@ -67,7 +67,7 @@ class AdminDashboard extends ConsumerWidget {
                         subtitle: "Pending requests",
                         icon: Icons.approval,
                         onTap: () {
-                          // TODO: Navigate to Leave Approval Page
+                          // TO DO
                         },
                       ),
                     ),
@@ -78,7 +78,7 @@ class AdminDashboard extends ConsumerWidget {
                         subtitle: "Create staff account",
                         icon: Icons.person_add,
                         onTap: () {
-                          // TODO: Navigate to Staff Management Page
+                          // TO DO
                         },
                       ),
                     ),
@@ -147,6 +147,7 @@ class AdminDashboard extends ConsumerWidget {
                 .collection('employees')
                 .snapshots(),
           ),
+
           _overviewItem(
             title: "Present Today",
             stream: FirebaseFirestore.instance
@@ -156,12 +157,13 @@ class AdminDashboard extends ConsumerWidget {
                 .where('date', isEqualTo: today)
                 .snapshots(),
           ),
+
+          // ✅ FIXED: Pending Leave (ROOT COLLECTION)
           _overviewItem(
             title: "Pending Leave",
             stream: FirebaseFirestore.instance
-                .collection('companies')
-                .doc(companyId)
                 .collection('leave_applications')
+                .where('companyId', isEqualTo: companyId)
                 .where('status', isEqualTo: 'pending')
                 .snapshots(),
           ),

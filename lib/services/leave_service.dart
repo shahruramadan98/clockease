@@ -2,13 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class LeaveService {
-  final _firestore = FirebaseFirestore.instance;
-  final _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   User? get user => _auth.currentUser;
 
-  // Submit leave
   Future<void> submitLeave({
+    required String companyId,
+    required String userName,
+    required String employeeId,
     required String leaveType,
     required DateTime startDate,
     required DateTime endDate,
@@ -17,25 +19,31 @@ class LeaveService {
 
     await _firestore.collection('leave_applications').add({
       'userId': user!.uid,
+      'companyId': companyId,
+      'userName': userName,
+      'employeeId': employeeId,
       'leaveType': leaveType,
-      'startDate': startDate,
-      'endDate': endDate,
+      'startDate': Timestamp.fromDate(startDate),
+      'endDate': Timestamp.fromDate(endDate),
       'status': 'pending',
       'createdAt': Timestamp.now(),
     });
   }
 
-  // Stream user leaves - optimized with Firestore-level sorting
   Stream<List<Map<String, dynamic>>> getUserLeaves() {
-    if (user == null) return Stream.value([]);
-    
-    return _firestore
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return const Stream.empty();
+    }
+
+    return FirebaseFirestore.instance
         .collection('leave_applications')
-        .where('userId', isEqualTo: user!.uid)
+        .where('userId', isEqualTo: user.uid)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snap) {
-          return snap.docs.map((doc) {
+        .map((snapshot) {
+
+          return snapshot.docs.map((doc) {
             return {
               'id': doc.id,
               ...doc.data(),
@@ -44,4 +52,3 @@ class LeaveService {
         });
   }
 }
-
