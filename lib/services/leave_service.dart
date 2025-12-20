@@ -25,7 +25,6 @@ class LeaveService {
     });
   }
 
-
   // Stream user leaves - optimized with Firestore-level sorting
   Stream<List<Map<String, dynamic>>> getUserLeaves() {
     if (user == null) return Stream.value([]);

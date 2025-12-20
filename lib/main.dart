@@ -42,7 +42,7 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       title: 'ClockEase',
       themeMode: themeMode,
-      theme: ThemeData.light(),
+      theme: ThemeData(primarySwatch: Colors.blue),
       darkTheme: ThemeData.dark(),
       home: const AuthWrapper(),
       // 🔥 Named routes for navigation
