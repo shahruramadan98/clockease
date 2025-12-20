@@ -23,14 +23,29 @@ class FirestoreService {
     if (_user == null) return Stream.value([]);
 
     return _db
-        .collection('attendance')
+        .collection('users')
         .doc(_user.uid)
-        .collection('records')
+        .collection('attendance')
         .orderBy('date', descending: true)
         .snapshots()
         .map((snap) => snap.docs
             .map((doc) => AttendanceRecord.fromMap(doc.data()))
             .toList());
+  }
+
+  Future<List<AttendanceRecord>> fetchAttendanceList() async {
+    if (_user == null) return [];
+
+    final snap = await _db
+        .collection('users')
+        .doc(_user.uid)
+        .collection('attendance')
+        .orderBy('date', descending: true)
+        .get();
+
+    return snap.docs
+        .map((doc) => AttendanceRecord.fromMap(doc.data()))
+        .toList();
   }
 
   // --- DASHBOARD CLOCK STATE ---

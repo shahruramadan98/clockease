@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'dashboard/dashboard.dart';
 import 'services/user_service.dart';
 import 'attendance/attendance_page.dart';
-import 'leave/leave_page.dart';
+import 'leave/leave_home_page.dart';
 import 'profile/profile_page.dart';
+import 'insights/insights_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -46,7 +47,7 @@ class _HomePageState extends State<HomePage> {
       AttendancePage(),
       LeavePage(),
       const Dashboard(),
-      const Center(child: Text("Insights Page")),
+      const InsightsPage(),
       const ProfilePage(),
     ];
 

@@ -33,6 +33,7 @@ dependencies:
   path_provider: ^2.0.15
   geolocator: ^13.0.2      # GPS location tracking
   geocoding: ^3.0.0        # Reverse geocoding for addresses
+  fl_chart: ^1.1.1
 
 dev_dependencies:
   flutter_test:
