@@ -27,6 +27,9 @@ class LeaveService {
 
   // Stream user leaves
   Stream<QuerySnapshot> getUserLeaves() {
+    if (user == null) {
+      return Stream.empty();
+    }
     return _firestore
         .collection('leave_applications')
         .where('userId', isEqualTo: user!.uid)

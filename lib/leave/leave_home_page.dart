@@ -10,17 +10,17 @@ class LeavePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Leave Application",
-          style: TextStyle(color: Color(0xFF3F51B5)), // Apply color to text
+          style: TextStyle(color: Theme.of(context).colorScheme.primary),
         ),
-        backgroundColor: Colors.white, // Set background to white
-        elevation: 0, // Remove shadow for a clean look
+        // backgroundColor: Use theme default
+        elevation: 0,
         actions: [
           IconButton(
             icon: Icon(
               Icons.notifications,
-              color: Color(0xFF3F51B5), // Change icon color to match text
+              color: Theme.of(context).colorScheme.primary,
             ),
             onPressed: () {
               // Handle notifications if any
@@ -255,7 +255,11 @@ class UpcomingLeaveSection extends StatelessWidget {
         children: [
           Text(
             "Upcoming Leave",
-            style: TextStyle(color: Color(0xFF3BAECC), fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 10),
           Container(
@@ -264,12 +268,18 @@ class UpcomingLeaveSection extends StatelessWidget {
             height: 90,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              color: Colors.grey.shade200,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade800
+                  : Colors.grey.shade200,
             ),
             child: Center(
               child: Text(
                 "No upcoming leave",
-                style: TextStyle(color: Colors.grey.shade600),
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade400
+                      : Colors.grey.shade600,
+                ),
               ),
             ),
           ),
@@ -296,7 +306,11 @@ class UpcomingLeaveSection extends StatelessWidget {
         children: [
           Text(
             "Upcoming Leave",
-            style: TextStyle(color: Color(0xFF3BAECC), fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 10),
           SizedBox(
@@ -432,7 +446,11 @@ class PendingLeaveSection extends StatelessWidget {
                 children: [
                   Text(
                     "Pending Requests",
-                    style: TextStyle(color: Color(0xFF3BAECC), fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -470,23 +488,37 @@ class PendingLeaveSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Pending Requests",
-            style: TextStyle(color: Color(0xFF3BAECC), fontSize: 20, fontWeight: FontWeight.bold),
+          Builder(
+            builder: (context) => Text(
+              "Pending Requests",
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(16),
-            width: double.infinity,
-            height: 90,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.grey.shade200,
-            ),
-            child: Center(
-              child: Text(
-                "No pending requests",
-                style: TextStyle(color: Colors.grey.shade600),
+          Builder(
+            builder: (context) => Container(
+              padding: const EdgeInsets.all(16),
+              width: double.infinity,
+              height: 90,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade800
+                    : Colors.grey.shade200,
+              ),
+              child: Center(
+                child: Text(
+                  "No pending requests",
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade400
+                        : Colors.grey.shade600,
+                  ),
+                ),
               ),
             ),
           ),
@@ -617,7 +649,9 @@ class PendingLeaveSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -778,23 +812,37 @@ class PastLeaveSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Past Leave",
-            style: TextStyle(color: Color(0xFF3BAECC), fontSize: 20, fontWeight: FontWeight.bold),
+          Builder(
+            builder: (context) => Text(
+              "Past Leave",
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(16),
-            width: double.infinity,
-            height: 90,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.grey.shade200,
-            ),
-            child: Center(
-              child: Text(
-                "No past leave",
-                style: TextStyle(color: Colors.grey.shade600),
+          Builder(
+            builder: (context) => Container(
+              padding: const EdgeInsets.all(16),
+              width: double.infinity,
+              height: 90,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.grey.shade800
+                    : Colors.grey.shade200,
+              ),
+              child: Center(
+                child: Text(
+                  "No past leave",
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade400
+                        : Colors.grey.shade600,
+                  ),
+                ),
               ),
             ),
           ),
@@ -826,7 +874,11 @@ class PastLeaveSection extends StatelessWidget {
         children: [
           Text(
             "Past Leave",
-            style: TextStyle(color: Color(0xFF3BAECC), fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 10),
           SizedBox(
@@ -964,15 +1016,15 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      // backgroundColor: Use theme default
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Apply for Leave",
-          style: TextStyle(color: Color(0xFF3F51B5)),
+          style: TextStyle(color: Theme.of(context).colorScheme.primary),
         ),
-        backgroundColor: Colors.white,
+        // backgroundColor: Use theme default
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF3F51B5)),
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -991,7 +1043,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
             Text(
               "Fill in the details below to submit your leave request",
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
                 fontSize: 14,
               ),
             ),
@@ -1039,7 +1091,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                           borderSide: const BorderSide(color: Color(0xFF3BAECC), width: 2),
                         ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: Theme.of(context).cardColor,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                       items: <String>['Annual', 'Sick', 'Emergency', 'Unpaid']
@@ -1092,7 +1144,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black87,
+                        // color: Use theme default
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1131,7 +1183,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey.shade300),
                           borderRadius: BorderRadius.circular(8),
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1139,7 +1191,9 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                             Text(
                               startDate == null ? "Select start date" : _formatDate(startDate!),
                               style: TextStyle(
-                                color: startDate == null ? Colors.grey.shade600 : Colors.black87,
+                                color: startDate == null
+                                    ? Colors.grey.shade600
+                                    : Theme.of(context).textTheme.bodyLarge?.color,
                                 fontSize: 14,
                               ),
                             ),
@@ -1194,7 +1248,11 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                             color: startDate == null ? Colors.grey.shade200 : Colors.grey.shade300,
                           ),
                           borderRadius: BorderRadius.circular(8),
-                          color: startDate == null ? Colors.grey.shade100 : Colors.white,
+                          color: startDate == null
+                              ? (Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.grey.shade900
+                                  : Colors.grey.shade100)
+                              : Theme.of(context).cardColor,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1202,7 +1260,9 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                             Text(
                               endDate == null ? "Select end date" : _formatDate(endDate!),
                               style: TextStyle(
-                                color: endDate == null ? Colors.grey.shade400 : Colors.black87,
+                                color: endDate == null
+                                    ? Colors.grey.shade400
+                                    : Theme.of(context).textTheme.bodyLarge?.color,
                                 fontSize: 14,
                               ),
                             ),

@@ -19,15 +19,13 @@ class Dashboard extends ConsumerWidget {
 
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      // backgroundColor: Use theme default
 
       // ===========================
       // 🔥 ADDED LOGOUT BUTTON HERE
       // ===========================
       appBar: AppBar(
         title: const Text("ClockEase"),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
@@ -66,7 +64,7 @@ class Dashboard extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      // color: Use theme default
                     ),
                   ),
 
@@ -94,12 +92,12 @@ class Dashboard extends ConsumerWidget {
 
                   const SizedBox(height: 20),
 
-                  const Center(
+                  Center(
                     child: Text(
                       "View today’s attendance details →",
                       style: TextStyle(
                         fontSize: 15,
-                        color: Color(0xFF3F51B5),
+                        color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),

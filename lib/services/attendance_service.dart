@@ -44,9 +44,9 @@ class AttendanceService {
     final today = DateFormat("yyyy-MM-dd").format(now);
 
     final ref = _db
-        .collection('attendance')
+        .collection('users')
         .doc(uid)
-        .collection('records')
+        .collection('attendance')
         .doc(today);
 
     final docSnap = await ref.get();
@@ -211,9 +211,9 @@ class AttendanceService {
     final today = DateFormat("yyyy-MM-dd").format(now);
 
     final ref = _db
-        .collection('attendance')
+        .collection('users')
         .doc(uid)
-        .collection('records')
+        .collection('attendance')
         .doc(today);
 
     final doc = await ref.get();
@@ -231,9 +231,9 @@ class AttendanceService {
 
     // Delete from unified collection
     await _db
-        .collection('attendance')
+        .collection('users')
         .doc(uid)
-        .collection('records')
+        .collection('attendance')
         .doc(today)
         .delete();
       

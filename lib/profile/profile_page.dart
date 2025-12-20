@@ -114,24 +114,55 @@ class ProfilePage extends ConsumerWidget {
                 ),
 
                 const SizedBox(height: 32),
-                SizedBox(
+                Container(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      await FirebaseAuth.instance.signOut();
-                      if (context.mounted) {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (context) => const LoginPage()),
-                          (route) => false,
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.logout, color: Colors.red),
-                    label: const Text('Log Out', style: TextStyle(color: Colors.red)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Colors.red),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE57373), Color(0xFFEF5350)], // Red gradient
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () async {
+                        await FirebaseAuth.instance.signOut();
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LoginPage()),
+                            (route) => false,
+                          );
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.logout, color: Colors.white),
+                            SizedBox(width: 8),
+                            Text(
+                              'Log Out',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -146,41 +177,63 @@ class ProfilePage extends ConsumerWidget {
   }
 
   Widget _buildHeader(profile) {
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 40,
-          backgroundColor: Colors.grey.shade300,
-          backgroundImage: profile.profilePictureUrl != null
-              ? NetworkImage(profile.profilePictureUrl!)
-              : null,
-          child: profile.profilePictureUrl == null
-              ? const Icon(Icons.person, size: 40, color: Colors.white)
-              : null,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF4CBFDA), Color(0xFF3BAECC)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                profile.fullName,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                profile.designation,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Staff ID: ${profile.employeeId}',
-                style: const TextStyle(fontSize: 14, color: Colors.blueGrey),
-              ),
-            ],
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
-        ),
-      ],
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 40,
+            backgroundColor: Colors.white.withOpacity(0.3),
+            backgroundImage: profile.profilePictureUrl != null
+                ? NetworkImage(profile.profilePictureUrl!)
+                : null,
+            child: profile.profilePictureUrl == null
+                ? const Icon(Icons.person, size: 40, color: Colors.white)
+                : null,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  profile.fullName,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  profile.designation,
+                  style: const TextStyle(fontSize: 16, color: Colors.white70),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Staff ID: ${profile.employeeId}',
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -193,7 +246,14 @@ class ProfilePage extends ConsumerWidget {
 
   Widget _buildListTile(BuildContext context, {required IconData icon, required String title, required String subtitle}) {
     return ListTile(
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF3470D9).withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: const Color(0xFF3470D9), size: 22),
+      ),
       title: Text(title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
       subtitle: Text(
         subtitle,

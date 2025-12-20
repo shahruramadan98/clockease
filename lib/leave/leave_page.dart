@@ -25,18 +25,24 @@ class _LeavePageState extends State<LeavePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      // backgroundColor: Use theme default
 
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        // backgroundColor: Use theme default
         elevation: 0,
-        title: const Text(
+        title: Text(
           "Leave Application",
-          style: TextStyle(color: Color(0xFF3F51B5), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications, color: Color(0xFF3F51B5)),
+            icon: Icon(
+              Icons.notifications,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             onPressed: () {},
           ),
         ],
@@ -56,8 +62,22 @@ class _LeavePageState extends State<LeavePage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: _leaveService.getUserLeaves(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SelectableText(
+                  "Error: ${snapshot.error}",
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+            );
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: Text("No data found"));
           }
 
           final docs = snapshot.data!.docs;
@@ -142,10 +162,10 @@ class _LeavePageState extends State<LeavePage> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF3F51B5),
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );
@@ -158,8 +178,10 @@ class _LeavePageState extends State<LeavePage> {
       child: Text(
         message,
         textAlign: TextAlign.left,
-        style: const TextStyle(
-          color: Colors.grey,
+        style: TextStyle(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white70
+              : Colors.grey,
           fontSize: 14,
           fontStyle: FontStyle.italic,
         ),
