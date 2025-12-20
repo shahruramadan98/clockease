@@ -74,15 +74,25 @@ class _FaceAttendancePageState extends State<FaceAttendancePage> {
         return;
       }
 
-      final userProfile = await UserService().getEmployeeProfile();
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+
+      if (uid == null) {
+        showMessage("User not logged in!");
+        setState(() => isLogging = false);
+        return;
+      }
+
+      final userProfile = await UserService().getEmployeeProfile(uid);
+
       if (userProfile == null) {
         showMessage("User profile not found!");
         setState(() => isLogging = false);
         return;
       }
 
-      final fullName = userProfile.fullName;
-final email = userProfile.email;
+
+      // final fullName = userProfile.fullName;
+      // final email = userProfile.email;
 
       // 4️⃣ Check if attendance already exists today
       final today = DateTime.now();

@@ -30,10 +30,22 @@ class LeaveService {
     if (user == null) {
       return Stream.empty();
     }
+  // Stream user leaves - optimized with Firestore-level sorting
+  Stream<List<Map<String, dynamic>>> getUserLeaves() {
+    if (user == null) return Stream.value([]);
+    
     return _firestore
         .collection('leave_applications')
         .where('userId', isEqualTo: user!.uid)
         .orderBy('createdAt', descending: true)
-        .snapshots();
+        .snapshots()
+        .map((snap) {
+          return snap.docs.map((doc) {
+            return {
+              'id': doc.id,
+              ...doc.data(),
+            };
+          }).toList();
+        });
   }
 }

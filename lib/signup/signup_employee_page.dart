@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../home_page.dart';
 
 class SignUpEmployeePage extends StatefulWidget {
-  final String companyUid;
-  final String companyEmail;
+  final String companyId;
 
   const SignUpEmployeePage({
     super.key,
-    required this.companyUid,
-    required this.companyEmail,
+    required this.companyId,
   });
 
   @override
@@ -19,41 +17,58 @@ class SignUpEmployeePage extends StatefulWidget {
 
 class _SignUpEmployeePageState extends State<SignUpEmployeePage> {
   final _formKey = GlobalKey<FormState>();
+
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _employeeIdController = TextEditingController();
   final _fullNameController = TextEditingController();
   final _designationController = TextEditingController();
+
   bool _isLoading = false;
 
-  Future<void> _submitAdminInfo() async {
+  Future<void> _submitAdminSignup() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
 
     try {
+      // 🔹 Create ADMIN Auth account
+      UserCredential credential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      final uid = credential.user!.uid;
+
+      // 🔹 Create admin employee profile
       await FirebaseFirestore.instance
           .collection('companies')
-          .doc(widget.companyUid)
+          .doc(widget.companyId)
           .collection('employees')
-          .doc(FirebaseAuth.instance.currentUser!.uid) // use employee UID
+          .doc(uid)
           .set({
-        'employeeId': _employeeIdController.text.trim(),
+        'uid': uid,
+        'email': _emailController.text.trim(),
         'fullName': _fullNameController.text.trim(),
+        'employeeId': _employeeIdController.text.trim(),
         'designation': _designationController.text.trim(),
-        'email': widget.companyEmail,
-        'role': 'admin',
+        'isAdmin': true,
+        'companyId': widget.companyId,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // 🔹 Go to Staff Home
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-          (route) => false,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+          (_) => false,
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save admin info: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Signup failed: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -65,22 +80,35 @@ class _SignUpEmployeePageState extends State<SignUpEmployeePage> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
+          // TOP LEFT TRIANGLE
           Positioned(
             top: 0,
             left: 0,
-            child: CustomPaint(
-              size: const Size(200, 200),
-              painter: TrianglePainter(color: const Color(0xFF4CBFDA), isTopLeft: true),
+            child: ClipPath(
+              clipper: _TriangleClipper(true),
+              child: Container(
+                height: 200,
+                width: 200,
+                color: const Color(0xFF4CBFDA),
+              ),
             ),
           ),
+  
+
+          // BOTTOM RIGHT TRIANGLE
           Positioned(
             bottom: 0,
             right: 0,
-            child: CustomPaint(
-              size: const Size(200, 200),
-              painter: TrianglePainter(color: const Color(0xFF4CBFDA), isTopLeft: false),
+            child: ClipPath(
+              clipper: _TriangleClipper(false),
+              child: Container(
+                height: 200,
+                width: 200,
+                color: const Color(0xFF4CBFDA),
+              ),
             ),
           ),
+      
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -89,42 +117,94 @@ class _SignUpEmployeePageState extends State<SignUpEmployeePage> {
                 child: Column(
                   children: [
                     Image.asset('assets/images/logo.png', height: 80),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     const Text(
-                      'Tell us a little bit about you',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      'Admin Registration',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
-                    Container(height: 4, width: 245, color: const Color(0xFF4CBFDA), margin: const EdgeInsets.only(top: 4)),
+                    Container(
+                      height: 4,
+                      width: 120,
+                      color: const Color(0xFF4CBFDA),
+                      margin: const EdgeInsets.only(top: 4),
+                    ),
+                    
                     const SizedBox(height: 40),
+
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        hintText: 'Admin Email',
+                        border: UnderlineInputBorder(),
+                      ),
+                      validator: (v) => v!.isEmpty ? 'Enter email' : null,
+                    ),
+                    const SizedBox(height: 20),
+
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Password',
+                        border: UnderlineInputBorder(),
+                      ),
+                      validator: (v) =>
+                          v!.length < 6 ? 'Minimum 6 characters' : null,
+                    ),
+                    const SizedBox(height: 20),
+
                     TextFormField(
                       controller: _employeeIdController,
-                      decoration: const InputDecoration(hintText: 'Employee ID', border: UnderlineInputBorder()),
-                      validator: (v) => v!.isEmpty ? 'Enter employee ID' : null,
+                      decoration: const InputDecoration(
+                        hintText: 'Employee ID',
+                        border: UnderlineInputBorder(),
+                      ),
+                      validator: (v) =>
+                          v!.isEmpty ? 'Enter employee ID' : null,
                     ),
                     const SizedBox(height: 20),
+
                     TextFormField(
                       controller: _fullNameController,
-                      decoration: const InputDecoration(hintText: 'Full Name', border: UnderlineInputBorder()),
-                      validator: (v) => v!.isEmpty ? 'Enter full name' : null,
+                      decoration: const InputDecoration(
+                        hintText: 'Full Name',
+                        border: UnderlineInputBorder(),
+                      ),
+                      validator: (v) =>
+                          v!.isEmpty ? 'Enter full name' : null,
                     ),
                     const SizedBox(height: 20),
+
                     TextFormField(
                       controller: _designationController,
-                      decoration: const InputDecoration(hintText: 'Designation', border: UnderlineInputBorder()),
+                      decoration: const InputDecoration(
+                        hintText: 'Designation',
+                        border: UnderlineInputBorder(),
+                      ),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 40),
+
                     SizedBox(
                       width: double.infinity,
                       height: 48,
                       child: ElevatedButton(
+                        onPressed: _isLoading ? null : _submitAdminSignup,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF3470D9),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
-                        onPressed: _isLoading ? null : _submitAdminInfo,
                         child: _isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text('Sign Up', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                            : const Text(
+                                'Sign Up',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -138,14 +218,12 @@ class _SignUpEmployeePageState extends State<SignUpEmployeePage> {
   }
 }
 
-class TrianglePainter extends CustomPainter {
-  final Color color;
+class _TriangleClipper extends CustomClipper<Path> {
   final bool isTopLeft;
-  TrianglePainter({required this.color, this.isTopLeft = true});
+  _TriangleClipper(this.isTopLeft);
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color;
+  Path getClip(Size size) {
     final path = Path();
     if (isTopLeft) {
       path.moveTo(0, 0);
@@ -153,13 +231,12 @@ class TrianglePainter extends CustomPainter {
       path.lineTo(0, size.height);
     } else {
       path.moveTo(size.width, size.height);
-      path.lineTo(0, size.height);
       path.lineTo(size.width, 0);
+      path.lineTo(0, size.height);
     }
-    path.close();
-    canvas.drawPath(path, paint);
+    return path;
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

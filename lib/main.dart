@@ -7,6 +7,7 @@ import 'controllers/theme_controller.dart';
 import 'firebase_options.dart';
 import 'login_page.dart';
 import 'home_page.dart';
+import 'controllers/profile_controller.dart'; // for authStateProvider
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,8 +18,7 @@ void main() async {
     );
   } catch (e) {
     if (e.toString().contains('[core/duplicate-app]')) {
-      // Firebase already initialized
-      Firebase.app();
+      Firebase.app(); // Firebase already initialized
     } else {
       rethrow;
     }
@@ -35,22 +35,44 @@ class MyApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
+  Widget build(BuildContext context) {
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'ClockEase',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      darkTheme: ThemeData.dark(), // Enable standard dark theme
-      themeMode: themeMode, // Listen to provider
-
-      // Routing
-      home: const AuthGate(),
-      routes: {
-        '/home': (_) => const HomePage(),
-        '/login': (_) => const LoginPage(),
-      },
+      home: AuthWrapper(),
     );
   }
 }
 
+/// ======================================================
+/// 🔥 AUTH WRAPPER (CRITICAL FIX)
+/// ======================================================
+class AuthWrapper extends ConsumerWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authAsync = ref.watch(authStateProvider);
+
+    return authAsync.when(
+      data: (user) {
+        // 🔥 Keyed ProviderScope forces FULL RESET on auth change
+        return ProviderScope(
+          key: ValueKey(user?.uid),
+          child: const AuthGate(),
+        );
+      },
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => const LoginPage(),
+    );
+  }
+}
+
+/// ======================================================
+/// AUTH GATE (UNCHANGED LOGIC)
+/// ======================================================
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 

@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-import '../controllers/dashboard_controller.dart';
-import '../controllers/user_provider.dart';
-import '../login_page.dart';
-
+import '../controllers/profile_controller.dart';
 import 'widgets/greeting_card.dart';
 import 'widgets/clock_card.dart';
 import 'widgets/quick_action_card.dart';
@@ -15,45 +11,29 @@ class Dashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(userProvider);
+    final profileAsync = ref.watch(profileProvider);
 
-
-    return Scaffold(
-      // backgroundColor: Use theme default
-
-      // ===========================
-      // 🔥 ADDED LOGOUT BUTTON HERE
-      // ===========================
-      appBar: AppBar(
-        title: const Text("ClockEase"),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (context.mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                );
-              }
-            },
-          ),
-        ],
+    return profileAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
       ),
-
-      body: SafeArea(
-        child: user.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => const Center(child: Text("Failed to load user")),
-          data: (_) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      error: (_, __) => const Scaffold(
+        body: Center(child: Text("Failed to load user")),
+      ),
+      data: (profile) {
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 20,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const GreetingCard(),
+                  // 🔹 Greeting Card (now reactive)
+                  GreetingCard(profile: profile),
                   const SizedBox(height: 20),
 
                   const ClockCard(),
@@ -67,7 +47,6 @@ class Dashboard extends ConsumerWidget {
                       // color: Use theme default
                     ),
                   ),
-
                   const SizedBox(height: 15),
 
                   Row(
@@ -104,10 +83,10 @@ class Dashboard extends ConsumerWidget {
                   ),
                 ],
               ),
-            );
-          },
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
