@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'dashboard/dashboard.dart';
 import 'services/user_service.dart';
 import 'attendance/attendance_page.dart';
-import 'leave/leave_home_page.dart';
+import 'leave/leave_page.dart';
 import 'profile/profile_page.dart';
 import 'insights/insights_page.dart';
 
