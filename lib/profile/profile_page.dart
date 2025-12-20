@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../controllers/profile_controller.dart';
 import '../controllers/theme_controller.dart';
 import '../admin/admin_home.dart';
+import '../login_page.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -198,7 +199,7 @@ class ProfilePage extends ConsumerWidget {
                         if (context.mounted) {
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (context) => const LoginPage()),
+                            MaterialPageRoute(builder: (context) => LoginPage()),
                             (route) => false,
                           );
                         }

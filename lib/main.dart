@@ -35,11 +35,12 @@ class MyApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
-  Widget build(BuildContext context) {
-    return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'ClockEase',
-      home: AuthWrapper(),
+      theme: ThemeData(primarySwatch: Colors.blue),
+      darkTheme: ThemeData.dark(),
+      themeMode: themeMode,
+      home: const AuthWrapper(),
     );
   }
 }
