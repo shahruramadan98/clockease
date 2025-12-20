@@ -25,12 +25,30 @@ class LeaveService {
     });
   }
 
-  // Stream user leaves
-  Stream<QuerySnapshot> getUserLeaves() {
+  // Stream user leaves - index-safe query
+  Stream<List<Map<String, dynamic>>> getUserLeaves() {
+    if (user == null) return Stream.value([]);
+    
     return _firestore
         .collection('leave_applications')
         .where('userId', isEqualTo: user!.uid)
-        .orderBy('createdAt', descending: true)
-        .snapshots();
+        .snapshots()
+        .map((snap) {
+          final leaves = snap.docs.map((doc) {
+            return {
+              'id': doc.id,
+              ...doc.data(),
+            };
+          }).toList();
+          
+          // Sort in Dart (descending by createdAt)
+          leaves.sort((a, b) {
+            final aTime = (a['createdAt'] as Timestamp).toDate();
+            final bTime = (b['createdAt'] as Timestamp).toDate();
+            return bTime.compareTo(aTime);
+          });
+          
+          return leaves;
+        });
   }
 }

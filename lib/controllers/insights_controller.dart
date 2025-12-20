@@ -1,13 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/attendance_record.dart';
 import '../models/attendance_status.dart';
-import '../services/firestore_service.dart';
+import 'attendance_controller.dart';
 
-// Provides the processed insights data
+// Provides the processed insights data - now using attendance logs
 final insightsProvider = FutureProvider<InsightsData>((ref) async {
-  final firestoreService = ref.read(firestoreServiceProvider);
-  final records = await firestoreService.fetchAttendanceList();
-  return InsightsData.fromRecords(records);
+  // Watch the attendance provider which reads from attendance_logs
+  final attendanceAsync = await ref.watch(attendanceProvider.future);
+  return InsightsData.fromRecords(attendanceAsync);
 });
 
 class InsightsData {

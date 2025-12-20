@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/attendance_record.dart';
+import '../models/attendance_log.dart';
 import '../models/dashboard_attendance_state.dart';
 
 final firestoreServiceProvider = Provider((ref) => FirestoreService());
@@ -102,5 +103,48 @@ class FirestoreService {
     if (!doc.exists) return null;
 
     return AttendanceRecord.fromMap(doc.data()!);
+  }
+
+  // --- NEW: ATTENDANCE LOGS COLLECTION ---
+  
+  /// Stream attendance logs from the new attendance_logs collection
+  /// Index-safe: queries by userId only, sorts in Dart
+  Stream<List<AttendanceLog>> getAttendanceLogsStream() {
+    if (_user == null) return Stream.value([]);
+
+    return _db
+        .collection('attendance_logs')
+        .where('userId', isEqualTo: _user.uid)
+        .snapshots()
+        .map((snap) {
+          final logs = snap.docs
+              .map((doc) => AttendanceLog.fromMap(doc.data(), doc.id))
+              .toList();
+          
+          // Sort in Dart (descending by timestamp)
+          logs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          
+          return logs;
+        });
+  }
+
+  /// Fetch attendance logs once from the new attendance_logs collection
+  /// Index-safe: queries by userId only, sorts in Dart
+  Future<List<AttendanceLog>> fetchAttendanceLogs() async {
+    if (_user == null) return [];
+
+    final snap = await _db
+        .collection('attendance_logs')
+        .where('userId', isEqualTo: _user.uid)
+        .get();
+
+    final logs = snap.docs
+        .map((doc) => AttendanceLog.fromMap(doc.data(), doc.id))
+        .toList();
+    
+    // Sort in Dart (descending by timestamp)
+    logs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    
+    return logs;
   }
 }

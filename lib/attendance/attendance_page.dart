@@ -36,7 +36,42 @@ class AttendancePage extends ConsumerWidget {
 
       body: attendanceState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text("Failed to load: $e")),
+        error: (e, stackTrace) {
+          // Log error to console for debugging
+          debugPrint('❌ Attendance History Error: $e');
+          debugPrint('Stack trace: $stackTrace');
+          
+          // Show user-friendly error message
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.grey,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Unable to load attendance',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Please try again later',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
         data: (records) {
           if (records.isEmpty) {
             return const Center(child: Text("No attendance records yet"));
