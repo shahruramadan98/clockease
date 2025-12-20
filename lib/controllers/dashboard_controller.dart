@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dashboard_attendance_state.dart';
+import '../models/attendance_log.dart';
 import '../services/attendance_service.dart';
+import '../services/firestore_service.dart';
 import '../services/location_service.dart';
 
 class DashboardController extends StateNotifier<DashboardAttendanceState> {
@@ -10,14 +12,21 @@ class DashboardController extends StateNotifier<DashboardAttendanceState> {
   }
 
   final _attendanceService = AttendanceService();
+  final _firestoreService = FirestoreService();
 
   Future<void> loadToday() async {
-    // UNIFIED SOURCE: Fetch from attendance/...
-    final data = await _attendanceService.getTodayRecord();
-    if (data != null) {
-      state = DashboardAttendanceState.fromMap(data);
+    // Query the last log from attendance_logs collection
+    final lastLog = await _firestoreService.getTodayLastLog();
+    
+    if (lastLog != null) {
+      // Determine state based on last log type
+      final isClockedIn = lastLog.type == AttendanceLogType.checkIn;
+      state = DashboardAttendanceState(
+        step: isClockedIn ? AttendanceStep.clockedIn : AttendanceStep.notStarted,
+        lastAction: lastLog.formattedTime,
+      );
     } else {
-      // If record exists (or was deleted), reset to initial state
+      // No logs today, reset to initial state
       state = DashboardAttendanceState.initial();
     }
   }

@@ -29,7 +29,8 @@ class AttendanceService {
     return await ref.getDownloadURL();
   }
 
-  /// Logs attendance to Firestore.
+  /// Logs attendance to attendance_logs collection.
+  /// Determines check-in/out state by querying the last log entry.
   /// Throws Exception on failure.
   /// Returns a Map with {success: true, type: "checkIn" | "checkOut"}
   Future<Map<String, dynamic>> logAttendance({
@@ -43,94 +44,45 @@ class AttendanceService {
     final now = DateTime.now();
     final today = DateFormat("yyyy-MM-dd").format(now);
 
-    final ref = _db
-        .collection('attendance')
-        .doc(uid)
-        .collection('records')
-        .doc(today);
+    // 1. Determine Current State by querying last log from attendance_logs
+    final lastLogQuery = await _db
+        .collection('attendance_logs')
+        .where('userId', isEqualTo: uid)
+        .where('date', isEqualTo: today)
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .get();
 
-    final docSnap = await ref.get();
-    final data = docSnap.data();
-
-    // 1. Determine Current State
-    // Default to false (Clocked Out) if not present
+    // Determine if currently clocked in based on last log
     bool isClockedIn = false;
-    if (data != null && data.containsKey('isClockedIn')) {
-      isClockedIn = data['isClockedIn'] == true;
-    } else if (data != null) {
-      // Legacy Fallback: If has checkIn but no checkOut -> assumes IN
-      if (data['checkIn'] != null && data['checkOut'] == null) {
-        isClockedIn = true;
-      }
+    if (lastLogQuery.docs.isNotEmpty) {
+      final lastLog = lastLogQuery.docs.first.data();
+      isClockedIn = lastLog['type'] == 'checkIn';
     }
 
     // 2. Determine Next Action
     final String actionType = isClockedIn ? "checkOut" : "checkIn";
     final formattedTime = formatClock(now);
 
-    // 3. Prepare Updates
-    final Map<String, dynamic> updates = {
-      "isClockedIn": !isClockedIn, // Toggle state
-      "lastUpdated": Timestamp.fromDate(now),
-      // Add to logs array
-      "logs": FieldValue.arrayUnion([
-        {
-          "type": actionType,
-          "time": Timestamp.fromDate(now),
-          "formattedTime": formattedTime,
-          "selfieUrl": selfieUrl ?? "",
-          // Include location in logs array
-          if (location != null) "location": location.toMap(),
-        }
-      ]),
+    // 3. Create attendance log entry
+    final Map<String, dynamic> logEntry = {
+      "userId": uid,
+      "type": actionType, // "checkIn" or "checkOut"
+      "timestamp": Timestamp.fromDate(now),
+      "date": today,
+      "faceImagePath": selfieUrl ?? "",
+      "formattedTime": formattedTime,
     };
-
-    if (actionType == "checkIn") {
-      // --- CLOCK IN ---
-      updates["formattedClockIn"] = formattedTime; // Display as last action
-      
-      // Keep "First Check-In" for history purposes if not set
-      if (data == null || data["checkIn"] == null) {
-        updates["date"] = Timestamp.fromDate(now); // Set date on first creation
-        updates["checkIn"] = Timestamp.fromDate(now);
-        updates["method"] = "face";
-      }
-    } else {
-      // --- CLOCK OUT ---
-      updates["formattedCheckOut"] = formattedTime; // Display as last action
-      updates["checkOut"] = Timestamp.fromDate(now); // Always update last check out
-      if (selfieUrl != null) {
-        updates["selfieUrlCheckOut"] = selfieUrl;
-      }
+    
+    // Add location to log if available
+    if (location != null) {
+      logEntry["location"] = location.toMap();
+      print('📍 Attendance Payload includes location: lat=${location.latitude}, lng=${location.longitude}');
     }
-
-    // 4. Commit Updates
-    await ref.set(updates, SetOptions(merge: true));
-
-    // 5. GRANULAR LOGGING (New Requirement)
-    // Save a separate immutable record for every event
-    try {
-      final granularLog = {
-        "userId": uid,
-        "type": actionType, // "checkIn" or "checkOut"
-        "timestamp": Timestamp.fromDate(now),
-        "date": today,
-        "imageUrl": selfieUrl ?? "",
-        "formattedTime": formattedTime,
-      };
-      
-      // Add location to granular log if available
-      if (location != null) {
-        granularLog["location"] = location.toMap();
-        print('📍 Attendance Payload includes location: lat=${location.latitude}, lng=${location.longitude}');
-      }
-      
-      await _db.collection('attendance_logs').add(granularLog);
-      print('✅ Attendance logged successfully to Firestore');
-    } catch (e) {
-      print("❌ Error saving granular log: $e");
-      // Don't fail the main flow if this auxiliary write fails
-    }
+    
+    // 4. Save to attendance_logs collection
+    await _db.collection('attendance_logs').add(logEntry);
+    print('✅ Attendance logged successfully to attendance_logs: $actionType');
 
     return {"success": true, "type": actionType};
   }
@@ -202,25 +154,8 @@ class AttendanceService {
     }
   }
 
-  Future<Map<String, dynamic>?> getTodayRecord() async {
-    final user = _auth.currentUser;
-    if (user == null) return null;
 
-    final uid = user.uid;
-    final now = DateTime.now();
-    final today = DateFormat("yyyy-MM-dd").format(now);
-
-    final ref = _db
-        .collection('attendance')
-        .doc(uid)
-        .collection('records')
-        .doc(today);
-
-    final doc = await ref.get();
-    return doc.exists ? doc.data() : null;
-  }
-
-  /// FOR DEV TESTING ONLY: Resets today's attendance
+  /// FOR DEV TESTING ONLY: Resets today's attendance from attendance_logs
   Future<void> resetToday() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -229,21 +164,18 @@ class AttendanceService {
     final now = DateTime.now();
     final today = DateFormat("yyyy-MM-dd").format(now);
 
-    // Delete from unified collection
-    await _db
-        .collection('attendance')
-        .doc(uid)
-        .collection('records')
-        .doc(today)
-        .delete();
-      
-    // Delete from users collection (legacy/dashboard sync)
-    // To ensure complete reset
-    await _db
-        .collection('users')
-        .doc(uid)
-        .collection('attendance')
-        .doc(today) // Note: this might use formatted ID, checking FirestoreService logic
-        .delete();
+    // Delete all attendance_logs for today
+    final logsQuery = await _db
+        .collection('attendance_logs')
+        .where('userId', isEqualTo: uid)
+        .where('date', isEqualTo: today)
+        .get();
+
+    for (final doc in logsQuery.docs) {
+      await doc.reference.delete();
+    }
+    
+    print('✅ Reset complete: deleted ${logsQuery.docs.length} logs for $today');
   }
 }
+
