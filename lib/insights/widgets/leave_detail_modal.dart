@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/leave_info.dart';
 
 class LeaveDetailModal extends StatelessWidget {
@@ -183,6 +184,79 @@ class LeaveDetailModal extends StatelessWidget {
               ),
             ],
           ),
+          // Show reason if available
+          if (leave.reason != null && leave.reason!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.notes,
+                  size: 14,
+                  color: Colors.grey.shade600,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    leave.reason!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade700,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          // Show attachment button if available
+          if (leave.attachmentUrl != null && leave.attachmentUrl!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: () async {
+                final url = Uri.parse(leave.attachmentUrl!);
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open attachment'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.attach_file,
+                      size: 14,
+                      color: Colors.blue.shade700,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'View Attachment',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
       trailing: leave.durationDays > 1

@@ -4,13 +4,105 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../controllers/profile_controller.dart';
 import '../controllers/theme_controller.dart';
+import '../services/user_service.dart';
 import '../admin/admin_home.dart';
 
-class ProfilePage extends ConsumerWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  // Edit mode state
+  bool _isEditMode = false;
+  bool _isSaving = false;
+
+  // Text controllers for editable fields
+  late TextEditingController _fullNameController;
+  late TextEditingController _phoneController;
+  late TextEditingController _designationController;
+  String? _selectedGender;
+
+  @override
+  void initState() {
+    super.initState();
+    _fullNameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _designationController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _phoneController.dispose();
+    _designationController.dispose();
+    super.dispose();
+  }
+
+  void _initializeControllers(profile) {
+    if (_fullNameController.text.isEmpty && !_isEditMode) {
+      _fullNameController.text = profile.fullName;
+      _phoneController.text = profile.phoneNumber ?? '';
+      _designationController.text = profile.designation;
+      _selectedGender = profile.gender;
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    final profile = ref.read(profileProvider).value;
+    if (profile == null) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final userService = UserService();
+      
+      final updates = {
+        'fullName': _fullNameController.text.trim(),
+        'phoneNumber': _phoneController.text.trim().isEmpty 
+            ? null 
+            : _phoneController.text.trim(),
+        'designation': _designationController.text.trim(),
+        'gender': _selectedGender,
+      };
+
+      await userService.updateEmployeeProfile(
+        profile.uid,
+        profile.companyId,
+        updates,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {
+          _isEditMode = false;
+          _isSaving = false;
+        });
+        // Refresh profile data
+        ref.invalidate(profileProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileProvider);
     final themeMode = ref.watch(themeProvider);
     final isDarkMode = themeMode == ThemeMode.dark;
@@ -19,6 +111,36 @@ class ProfilePage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('My Profile'),
         elevation: 0,
+        actions: [
+          if (_isEditMode)
+            TextButton(
+              onPressed: () {
+                setState(() => _isEditMode = false);
+              },
+              child: const Text('Cancel'),
+            ),
+          if (_isEditMode)
+            IconButton(
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.save),
+              onPressed: _isSaving ? null : _saveProfile,
+            ),
+          if (!_isEditMode && profileAsync.hasValue && profileAsync.value != null)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                setState(() => _isEditMode = true);
+              },
+            ),
+        ],
       ),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -36,6 +158,9 @@ class ProfilePage extends ConsumerWidget {
               ),
             );
           }
+
+          // Initialize controllers with profile data
+          _initializeControllers(profile);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -59,26 +184,72 @@ class ProfilePage extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(12)),
                   child: Column(
                     children: [
-                      _buildListTile(
+                      // Email - Always read-only (locked)
+                      _buildLockedEmailField(
                         context,
-                        icon: Icons.email_outlined,
-                        title: 'Email',
-                        subtitle: profile.email,
+                        profile.email,
                       ),
                       _buildDivider(),
-                      _buildListTile(
-                        context,
-                        icon: Icons.phone_outlined,
-                        title: 'Phone Number',
-                        subtitle: profile.phoneNumber ?? 'Not set',
-                      ),
+                      
+                      // Full Name - Editable
+                      if (_isEditMode)
+                        _buildEditableField(
+                          icon: Icons.person,
+                          label: 'Full Name',
+                          controller: _fullNameController,
+                        )
+                      else
+                        _buildListTile(
+                          context,
+                          icon: Icons.person,
+                          title: 'Full Name',
+                          subtitle: profile.fullName,
+                        ),
                       _buildDivider(),
-                      _buildListTile(
-                        context,
-                        icon: Icons.person_outline,
-                        title: 'Gender',
-                        subtitle: profile.gender ?? 'Not set',
-                      ),
+                      
+                      // Phone Number - Editable
+                      if (_isEditMode)
+                        _buildEditableField(
+                          icon: Icons.phone_outlined,
+                          label: 'Phone Number',
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                        )
+                      else
+                        _buildListTile(
+                          context,
+                          icon: Icons.phone_outlined,
+                          title: 'Phone Number',
+                          subtitle: profile.phoneNumber ?? 'Not set',
+                        ),
+                      _buildDivider(),
+                      
+                      // Designation - Editable
+                      if (_isEditMode)
+                        _buildEditableField(
+                          icon: Icons.work_outline,
+                          label: 'Designation',
+                          controller: _designationController,
+                        )
+                      else
+                        _buildListTile(
+                          context,
+                          icon: Icons.work_outline,
+                          title: 'Designation',
+                          subtitle: profile.designation,
+                        ),
+                      _buildDivider(),
+                      
+                      // Gender - Editable with dropdown
+                      if (_isEditMode)
+                        _buildGenderDropdown()
+                      else
+                        _buildListTile(
+                          context,
+                          icon: Icons.person_outline,
+                          title: 'Gender',
+                          subtitle: profile.gender ?? 'Not set',
+                        ),
                     ],
                   ),
                 ),
@@ -333,51 +504,339 @@ class ProfilePage extends ConsumerWidget {
         endIndent: 16);
   }
 
+  Widget _buildEditableField({
+    required IconData icon,
+    required String label,
+    required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 16),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType: keyboardType,
+              decoration: InputDecoration(
+                labelText: label,
+                border: const OutlineInputBorder(),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGenderDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(Icons.person_outline, 
+              color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 16),
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              value: _selectedGender,
+              decoration: const InputDecoration(
+                labelText: 'Gender',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+              items: ['Male', 'Female', 'Other']
+                  .map((gender) => DropdownMenuItem(
+                        value: gender,
+                        child: Text(gender),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() => _selectedGender = value);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLockedEmailField(BuildContext context, String email) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.email_outlined, 
+                  color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Email',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            email,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.lock,
+                          size: 18,
+                          color: Colors.grey,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 48),
+            child: Text(
+              'Only admin can edit from admin panel',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showChangePasswordDialog(BuildContext context) {
-    final email =
-        FirebaseAuth.instance.currentUser?.email;
-    if (email == null) return;
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    
+    bool isChanging = false;
+    bool obscureCurrentPassword = true;
+    bool obscureNewPassword = true;
+    bool obscureConfirmPassword = true;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Change Password'),
-        content: Text(
-            'We will send a password reset link to:\n$email\n\nProceed?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Change Password'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: currentPasswordController,
+                  obscureText: obscureCurrentPassword,
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscureCurrentPassword 
+                            ? Icons.visibility_off 
+                            : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setDialogState(() {
+                          obscureCurrentPassword = !obscureCurrentPassword;
+                        });
+                      },
+                    ),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: newPasswordController,
+                  obscureText: obscureNewPassword,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscureNewPassword 
+                            ? Icons.visibility_off 
+                            : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setDialogState(() {
+                          obscureNewPassword = !obscureNewPassword;
+                        });
+                      },
+                    ),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm New Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscureConfirmPassword 
+                            ? Icons.visibility_off 
+                            : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setDialogState(() {
+                          obscureConfirmPassword = !obscureConfirmPassword;
+                        });
+                      },
+                    ),
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                await FirebaseAuth.instance
-                    .sendPasswordResetEmail(
-                        email: email);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(
-                    const SnackBar(
-                        content: Text(
-                            'Password reset email sent')),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(
-                    SnackBar(
-                        content:
-                            Text('Error: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Send Email'),
-          ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: isChanging ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isChanging
+                  ? null
+                  : () async {
+                      final currentPassword = currentPasswordController.text.trim();
+                      final newPassword = newPasswordController.text.trim();
+                      final confirmPassword = confirmPasswordController.text.trim();
+
+                      // Validation
+                      if (currentPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please fill in all fields'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (newPassword.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Password must be at least 6 characters'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (newPassword != confirmPassword) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('New passwords do not match'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isChanging = true);
+
+                      try {
+                        final user = FirebaseAuth.instance.currentUser;
+                        if (user == null || user.email == null) {
+                          throw Exception('No user logged in');
+                        }
+
+                        // Reauthenticate with current password
+                        final credential = EmailAuthProvider.credential(
+                          email: user.email!,
+                          password: currentPassword,
+                        );
+
+                        await user.reauthenticateWithCredential(credential);
+
+                        // Update password
+                        await user.updatePassword(newPassword);
+
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password changed successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } on FirebaseAuthException catch (e) {
+                        setDialogState(() => isChanging = false);
+                        
+                        String errorMessage = 'Error changing password';
+                        if (e.code == 'wrong-password') {
+                          errorMessage = 'Current password is incorrect';
+                        } else if (e.code == 'weak-password') {
+                          errorMessage = 'New password is too weak';
+                        } else if (e.code == 'requires-recent-login') {
+                          errorMessage = 'Please log out and log in again before changing password';
+                        }
+
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(errorMessage),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => isChanging = false);
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isChanging
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Change Password'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/leave_service.dart';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/user_service.dart';
+import 'package:file_picker/file_picker.dart';
 
 
 class LeaveApplicationForm extends StatefulWidget {
@@ -14,12 +14,20 @@ class LeaveApplicationForm extends StatefulWidget {
 
 class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
   final LeaveService _leaveService = LeaveService();
+  final TextEditingController _reasonController = TextEditingController();
 
   String? selectedLeaveType;
   DateTime? startDate;
   DateTime? endDate;
+  PlatformFile? _selectedFile;
 
   bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
 
   String _formatDate(DateTime date) {
     const months = [
@@ -27,6 +35,47 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  String _calculateDuration() {
+    if (startDate == null || endDate == null) return '0';
+    
+    // Check if it's a half-day leave
+    if (selectedLeaveType == 'Half Day (AM)' || selectedLeaveType == 'Half Day (PM)') {
+      return '0.5';
+    }
+    
+    // Normal day calculation
+    return '${endDate!.difference(startDate!).inDays + 1}';
+  }
+
+  Future<void> _pickFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        withData: true, // Important: load file bytes
+      );
+
+      if (result != null) {
+        setState(() {
+          _selectedFile = result.files.single;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error picking file: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _removeFile() {
+    setState(() {
+      _selectedFile = null;
+    });
   }
 
   Future<void> submitLeave() async {
@@ -40,43 +89,68 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
       return;
     }
 
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    setState(() => _isSubmitting = true);
 
-    final userService = UserService();
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
 
-    final profile = await userService.getEmployeeProfile(uid);
-    final companyId = await userService.getCompanyIdForUser(uid);
+      final userService = UserService();
+      final profile = await userService.getEmployeeProfile(uid);
+      final companyId = await userService.getCompanyIdForUser(uid);
 
-    if (profile == null || companyId == null) {
+      if (profile == null || companyId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("User profile not found"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Upload attachment if file is selected
+      String? attachmentUrl;
+      if (_selectedFile != null) {
+        attachmentUrl = await _leaveService.uploadAttachment(_selectedFile!);
+        if (attachmentUrl == null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Failed to upload attachment. Please try again."),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+      }
+
+      await _leaveService.submitLeave(
+        companyId: companyId,
+        userName: profile.fullName,
+        employeeId: profile.employeeId,
+        leaveType: selectedLeaveType!,
+        startDate: startDate!,
+        endDate: endDate!,
+        reason: _reasonController.text.trim().isEmpty ? null : _reasonController.text.trim(),
+        attachmentUrl: attachmentUrl,
+      );
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("User profile not found"),
-          backgroundColor: Colors.red,
+          content: Text("Leave request submitted"),
+          backgroundColor: Colors.green,
         ),
       );
-      return;
+
+      Navigator.pop(context);
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
-
-    await _leaveService.submitLeave(
-      companyId: companyId,
-      userName: profile.fullName,
-      employeeId: profile.employeeId,
-      leaveType: selectedLeaveType!,
-      startDate: startDate!,
-      endDate: endDate!,
-    );
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Leave request submitted"),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    Navigator.pop(context);
   }
 
   @override
@@ -130,10 +204,43 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                     labelText: "Leave Type",
                     border: OutlineInputBorder(),
                   ),
-                  items: const ['Annual', 'Sick', 'Emergency', 'Unpaid']
+                  items: const ['Annual', 'Sick', 'Emergency', 'Unpaid', 'Replacement Leave', 'Half Day (AM)', 'Half Day (PM)']
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
-                  onChanged: (v) => setState(() => selectedLeaveType = v),
+                  onChanged: (v) {
+                    setState(() {
+                      selectedLeaveType = v;
+                      // Clear attachment if switching away from sick leave
+                      if (v != 'Sick') {
+                        _selectedFile = null;
+                      }
+                    });
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // =====================
+            // REASON FIELD
+            // =====================
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextFormField(
+                  controller: _reasonController,
+                  decoration: const InputDecoration(
+                    labelText: "Reason for Leave",
+                    hintText: "Enter the reason for your leave (optional)",
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  textCapitalization: TextCapitalization.sentences,
                 ),
               ),
             ),
@@ -173,13 +280,114 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  "Duration: ${endDate!.difference(startDate!).inDays + 1} day(s)",
+                  "Duration: ${_calculateDuration()} day(s)",
                   style: const TextStyle(
                     color: Color(0xFF3BAECC),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
+
+            // =====================
+            // ATTACHMENT (SICK LEAVE ONLY)
+            // =====================
+            if (selectedLeaveType == 'Sick') ...[
+              const SizedBox(height: 16),
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.attach_file, color: Color(0xFF3BAECC)),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Attachment (Optional)",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Upload medical certificate or supporting document",
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (_selectedFile == null)
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _pickFile,
+                            icon: const Icon(Icons.upload_file),
+                            label: const Text("Choose File"),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: BorderSide(color: Colors.grey.shade300),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3BAECC).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFF3BAECC).withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.insert_drive_file,
+                                color: Color(0xFF3BAECC),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _selectedFile!.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: _removeFile,
+                                icon: const Icon(Icons.close),
+                                color: Colors.red.shade400,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Supported formats: PDF, JPG, PNG",
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
 
             const SizedBox(height: 32),
 
@@ -190,7 +398,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: submitLeave,
+                onPressed: _isSubmitting ? null : submitLeave,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF3BAECC),
                   foregroundColor: Colors.white,
@@ -199,20 +407,29 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.send, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      "Submit Leave Request",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.send, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            "Submit Leave Request",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

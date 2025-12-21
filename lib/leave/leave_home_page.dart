@@ -45,12 +45,30 @@ class _LeavePageState extends State<LeavePage> {
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _leaveService.getUserLeaves(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          // Only show loading when waiting AND we don't have previous data
+          if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // Show error if stream has error
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error: ${snapshot.error}'),
+                ],
+              ),
+            );
+          }
+
           final leaves = snapshot.data ?? [];
-          if (leaves.isEmpty) {
+          
+          // Only show empty state when we're sure there's no data
+          // (not during connection state changes)
+          if (leaves.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
             return _buildEmptyState();
           }
 
@@ -221,12 +239,25 @@ class _LeavePageState extends State<LeavePage> {
       return _buildEmptySection("Upcoming Leave", "No upcoming leave");
     }
 
-    final leave = leaves.first;
-    return _leaveCard(
-      "Upcoming Leave",
-      leave,
-      "Approved",
-      Colors.green,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Upcoming Leave",
+          style: TextStyle(
+            color: Color(0xFF3BAECC),
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        ...leaves.map((leave) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildUpcomingLeaveCard(leave),
+          );
+        }),
+      ],
     );
   }
 
@@ -322,6 +353,110 @@ class _LeavePageState extends State<LeavePage> {
     );
   }
 
+  Widget _buildUpcomingLeaveCard(Map<String, dynamic> leave) {
+    final leaveType = leave['leaveType'];
+    final start = (leave['startDate'] as Timestamp).toDate();
+    final end = (leave['endDate'] as Timestamp).toDate();
+
+    final date = start == end
+        ? _formatDate(start)
+        : "${_formatDate(start)} - ${_formatDate(end)}";
+
+    return Container(
+      height: 90,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(leaveType,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(date, style: const TextStyle(color: Colors.white)),
+            ],
+          ),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              "Approved",
+              style: TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPastLeaveCard(Map<String, dynamic> leave) {
+    final leaveType = leave['leaveType'];
+    final start = (leave['startDate'] as Timestamp).toDate();
+    final end = (leave['endDate'] as Timestamp).toDate();
+    final status = leave['status'] == 'approved' ? "Taken" : "Rejected";
+    final color = leave['status'] == 'approved' ? Colors.grey : Colors.red;
+
+    final date = start == end
+        ? _formatDate(start)
+        : "${_formatDate(start)} - ${_formatDate(end)}";
+
+    return Container(
+      height: 90,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(leaveType,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(date, style: const TextStyle(color: Colors.white)),
+            ],
+          ),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              status,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // =============================
   // PAST
   // =============================
@@ -330,81 +465,28 @@ class _LeavePageState extends State<LeavePage> {
       return _buildEmptySection("Past Leave", "No past leave");
     }
 
-    final leave = leaves.first;
-    final status = leave['status'] == 'approved' ? "Taken" : "Rejected";
-    final color = leave['status'] == 'approved' ? Colors.grey : Colors.red;
-
-    return _leaveCard("Past Leave", leave, status, color);
-  }
-
-  Widget _leaveCard(
-    String title,
-    Map<String, dynamic> leave,
-    String status,
-    Color color,
-  ) {
-    final start = (leave['startDate'] as Timestamp).toDate();
-    final end = (leave['endDate'] as Timestamp).toDate();
-
-    final date = start == end
-        ? _formatDate(start)
-        : "${_formatDate(start)} - ${_formatDate(end)}";
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title,
-            style: const TextStyle(
-              color: Color(0xFF3BAECC),
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            )),
-        const SizedBox(height: 10),
-        Container(
-          height: 90,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(leave['leaveType'],
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(date,
-                      style: const TextStyle(color: Colors.white)),
-                ],
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  status,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+        const Text(
+          "Past Leave",
+          style: TextStyle(
+            color: Color(0xFF3BAECC),
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
         ),
+        const SizedBox(height: 10),
+        ...leaves.map((leave) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildPastLeaveCard(leave),
+          );
+        }),
       ],
     );
   }
+
 
   Widget _buildEmptySection(String title, String text) {
     return Column(

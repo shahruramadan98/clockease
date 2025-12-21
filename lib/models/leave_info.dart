@@ -10,6 +10,8 @@ class LeaveInfo {
   final DateTime startDate;
   final DateTime endDate;
   final String status;
+  final String? reason;
+  final String? attachmentUrl;
 
   LeaveInfo({
     required this.id,
@@ -21,6 +23,8 @@ class LeaveInfo {
     required this.startDate,
     required this.endDate,
     required this.status,
+    this.reason,
+    this.attachmentUrl,
   });
 
   // ✅ Preferred factory: build directly from Firestore document
@@ -39,6 +43,8 @@ class LeaveInfo {
       startDate: (data['startDate'] as Timestamp).toDate(),
       endDate: (data['endDate'] as Timestamp).toDate(),
       status: data['status'],
+      reason: data['reason'] as String?,
+      attachmentUrl: data['attachmentUrl'] as String?,
     );
   }
 

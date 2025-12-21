@@ -75,5 +75,26 @@ class FirestoreService {
 
     return AttendanceLog.fromMap(snap.docs.first.data(), snap.docs.first.id);
   }
+
+  /// Stream today's last attendance log for real-time dashboard updates
+  /// This enables reactive UI that automatically updates when attendance is logged
+  Stream<AttendanceLog?> watchTodayLastLog() {
+    if (_user == null) return Stream.value(null);
+
+    final now = DateTime.now();
+    final today = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    return _db
+        .collection('attendance_logs')
+        .where('userId', isEqualTo: _user.uid)
+        .where('date', isEqualTo: today)
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .snapshots()
+        .map((snap) {
+          if (snap.docs.isEmpty) return null;
+          return AttendanceLog.fromMap(snap.docs.first.data(), snap.docs.first.id);
+        });
+  }
 }
 

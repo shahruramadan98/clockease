@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class LeaveApprovalPage extends StatelessWidget {
   final String companyId;
@@ -79,50 +80,132 @@ class LeaveApprovalPage extends StatelessWidget {
                     final end =
                         (data['endDate'] as Timestamp).toDate();
 
+                    final reason = data['reason'] as String?;
+                    final attachmentUrl = data['attachmentUrl'] as String?;
+                    final leaveType = data['leaveType'] as String? ?? '';
+                    final isSickLeave = leaveType == 'Sick';
+
                     return Card(
                       elevation: 3,
                       margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        title: Text(
-                          data['userName'] ?? 'Unknown',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Column(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '${data['leaveType']} • ID: ${data['employeeId']}',
+                            // Header row with name and action buttons
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    data['userName'] ?? 'Unknown',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: 'Approve',
+                                  icon: const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  ),
+                                  onPressed: () =>
+                                      _updateStatus(doc.reference, 'approved'),
+                                ),
+                                IconButton(
+                                  tooltip: 'Reject',
+                                  icon: const Icon(
+                                    Icons.cancel,
+                                    color: Colors.redAccent,
+                                  ),
+                                  onPressed: () =>
+                                      _updateStatus(doc.reference, 'rejected'),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${_fmt(start)} → ${_fmt(end)}',
-                              style: const TextStyle(fontSize: 12),
+                            const SizedBox(height: 8),
+                            
+                            // Leave type and employee ID
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.event_note,
+                                  size: 16,
+                                  color: Colors.grey[600],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$leaveType • ID: ${data['employeeId']}',
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: 'Approve',
-                              icon: const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
+                            const SizedBox(height: 6),
+                            
+                            // Date range
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 16,
+                                  color: Colors.grey[600],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${_fmt(start)} → ${_fmt(end)}',
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ],
+                            ),
+                            
+                            // Reason (if provided)
+                            if (reason != null && reason.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.description,
+                                    size: 16,
+                                    color: Colors.grey[600],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Reason: $reason',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[800],
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              onPressed: () =>
-                                  _updateStatus(doc.reference, 'approved'),
-                            ),
-                            IconButton(
-                              tooltip: 'Reject',
-                              icon: const Icon(
-                                Icons.cancel,
-                                color: Colors.redAccent,
+                            ],
+                            
+                            // Attachment button (only for Sick Leave with attachment)
+                            if (isSickLeave && attachmentUrl != null && attachmentUrl.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () => _openAttachment(attachmentUrl),
+                                icon: const Icon(Icons.attach_file, size: 18),
+                                label: const Text('View Attachment'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF3F51B5),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                ),
                               ),
-                              onPressed: () =>
-                                  _updateStatus(doc.reference, 'rejected'),
-                            ),
+                            ],
                           ],
                         ),
                       ),
@@ -148,6 +231,19 @@ class LeaveApprovalPage extends StatelessWidget {
       'status': status,
       'actionAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  // ==========================
+  // OPEN ATTACHMENT
+  // ==========================
+  Future<void> _openAttachment(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      // Use platformDefault mode which works better on Android
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+    } catch (e) {
+      debugPrint('Could not launch $url: $e');
+    }
   }
 
   // ==========================

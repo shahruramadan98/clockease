@@ -83,15 +83,25 @@ class StaffManagementPage extends StatelessWidget {
                       child: ListTile(
                         title: Text(emp['fullName']),
                         subtitle: Text(emp['designation']),
-                        trailing: Chip(
-                          label: Text(
-                            emp['isAdmin'] ? 'Admin' : 'Staff',
-                            style: const TextStyle(
-                                color: Colors.white),
-                          ),
-                          backgroundColor: emp['isAdmin']
-                              ? Colors.blue
-                              : const Color.fromARGB(255, 158, 158, 158),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Chip(
+                              label: Text(
+                                emp['isAdmin'] ? 'Admin' : 'Staff',
+                                style: const TextStyle(
+                                    color: Colors.white),
+                              ),
+                              backgroundColor: emp['isAdmin']
+                                  ? Colors.blue
+                                  : const Color.fromARGB(255, 158, 158, 158),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Color(0xFF3470D9)),
+                              onPressed: () => _showEditStaffDialog(context, emp),
+                              tooltip: 'Edit Staff',
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -206,6 +216,158 @@ class StaffManagementPage extends StatelessWidget {
               },
             ),
           ],
+        );
+      },
+    );
+  }
+
+  // ================================
+  // EDIT STAFF DIALOG
+  // ================================
+  void _showEditStaffDialog(BuildContext context, DocumentSnapshot emp) {
+    final data = emp.data() as Map<String, dynamic>;
+    
+    final emailController = TextEditingController(text: data['email'] ?? '');
+    final nameController = TextEditingController(text: data['fullName'] ?? '');
+    final empIdController = TextEditingController(text: data['employeeId'] ?? '');
+    final designationController = TextEditingController(text: data['designation'] ?? '');
+    final phoneController = TextEditingController(text: data['phoneNumber'] ?? '');
+    
+    String? selectedGender = data['gender'];
+    bool isAdmin = data['isAdmin'] ?? false;
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit Staff'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _field(emailController, 'Email'),
+                    _field(empIdController, 'Employee ID'),
+                    _field(nameController, 'Full Name'),
+                    _field(designationController, 'Designation'),
+                    _field(phoneController, 'Phone Number'),
+                    
+                    // Gender Dropdown
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: DropdownButtonFormField<String>(
+                        value: selectedGender,
+                        decoration: const InputDecoration(
+                          labelText: 'Gender',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: null, child: Text('Not set')),
+                          DropdownMenuItem(value: 'Male', child: Text('Male')),
+                          DropdownMenuItem(value: 'Female', child: Text('Female')),
+                          DropdownMenuItem(value: 'Other', child: Text('Other')),
+                        ],
+                        onChanged: (value) {
+                          setDialogState(() => selectedGender = value);
+                        },
+                      ),
+                    ),
+                    
+                    // Admin Status Toggle
+                    SwitchListTile(
+                      title: const Text('Admin Access'),
+                      subtitle: const Text('Grant admin panel access'),
+                      value: isAdmin,
+                      activeColor: const Color(0xFF3470D9),
+                      onChanged: (value) {
+                        setDialogState(() => isAdmin = value);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          // Validation
+                          if (emailController.text.trim().isEmpty ||
+                              nameController.text.trim().isEmpty ||
+                              empIdController.text.trim().isEmpty ||
+                              designationController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please fill in all required fields'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => isSaving = true);
+
+                          try {
+                            final updates = {
+                              'email': emailController.text.trim(),
+                              'fullName': nameController.text.trim(),
+                              'employeeId': empIdController.text.trim(),
+                              'designation': designationController.text.trim(),
+                              'phoneNumber': phoneController.text.trim().isEmpty 
+                                  ? null 
+                                  : phoneController.text.trim(),
+                              'gender': selectedGender,
+                              'isAdmin': isAdmin,
+                            };
+
+                            await FirebaseFirestore.instance
+                                .collection('companies')
+                                .doc(companyId)
+                                .collection('employees')
+                                .doc(emp.id)
+                                .update(updates);
+
+                            if (context.mounted) {
+                              Navigator.pop(dialogContext);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Staff updated successfully'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isSaving = false);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error updating staff: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isSaving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Save Changes'),
+                ),
+              ],
+            );
+          },
         );
       },
     );

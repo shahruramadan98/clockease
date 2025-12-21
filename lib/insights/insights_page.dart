@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../controllers/insights_controller.dart';
+import '../controllers/user_provider.dart';
 import 'widgets/summary_card.dart';
 import 'widgets/punctuality_chart.dart';
 import 'widgets/insight_text_card.dart';
+import 'widgets/leave_calendar.dart';
 
 class InsightsPage extends ConsumerWidget {
   const InsightsPage({super.key});
@@ -11,6 +13,7 @@ class InsightsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final insightsAsync = ref.watch(insightsProvider);
+    final userAsync = ref.watch(userProvider);
 
     return Scaffold(
       // backgroundColor: Use default theme
@@ -192,6 +195,57 @@ class InsightsPage extends ConsumerWidget {
                   content: "Longest streak was ${data.maxStreak} days.",
                   icon: Icons.emoji_events_outlined,
                   color: Colors.amber,
+                ),
+                
+                const SizedBox(height: 32),
+
+                // 5. TEAM LEAVE CALENDAR
+                Text(
+                  "Team Leave Calendar",
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "View when your teammates are on leave",
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                
+                // Calendar widget with user provider check
+                userAsync.when(
+                  loading: () => const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+                  error: (e, _) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        "Unable to load calendar: $e",
+                        style: TextStyle(color: Colors.red.shade700),
+                      ),
+                    ),
+                  ),
+                  data: (user) {
+                    if (user == null || user.companyId.isEmpty) {
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Text(
+                            "Company information not available",
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ),
+                      );
+                    }
+                    return LeaveCalendar(companyId: user.companyId);
+                  },
                 ),
                 
                 const SizedBox(height: 40),

@@ -21,11 +21,57 @@ class ClockCard extends ConsumerWidget {
   }
 
   @override
-  @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(dashboardProvider);
-    final controller = ref.read(dashboardProvider.notifier);
+    final asyncState = ref.watch(dashboardProvider);
+    final controller = ref.read(dashboardControllerProvider);
 
+    // Handle async state from stream provider
+    return asyncState.when(
+      loading: () => _buildLoadingCard(),
+      error: (_, __) => _buildErrorCard(),
+      data: (state) => _buildClockCard(context, ref, state, controller),
+    );
+  }
+
+  Widget _buildLoadingCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF3470D9), Color(0xFF4CBFDA)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildErrorCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.red.shade100,
+      ),
+      child: const Center(
+        child: Text(
+          "Error loading attendance state",
+          style: TextStyle(color: Colors.red),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClockCard(
+    BuildContext context,
+    WidgetRef ref,
+    DashboardAttendanceState state,
+    DashboardController controller,
+  ) {
     // Derive UI properties from the step
     String title;
     String subtitle;
@@ -75,6 +121,8 @@ class ClockCard extends ConsumerWidget {
         }
 
         // STEP 2: Navigate to face verification screen (UNCHANGED)
+        if (!context.mounted) return;
+        
         final result = await Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const FaceVerificationPage()),
