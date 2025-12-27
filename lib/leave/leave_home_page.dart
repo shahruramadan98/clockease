@@ -11,12 +11,25 @@ class LeavePage extends StatefulWidget {
   State<LeavePage> createState() => _LeavePageState();
 }
 
-class _LeavePageState extends State<LeavePage> {
+class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMixin {
   final LeaveService _leaveService = LeaveService();
   final DateFormat dateFormatter = DateFormat('dd/MM/yyyy');
+  late TabController _tabController;
 
   static const int annualTotal = 15;
   static const int sickTotal = 7;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   int calculateDays(DateTime start, DateTime end) {
     return end.difference(start).inDays + 1;
@@ -65,12 +78,6 @@ class _LeavePageState extends State<LeavePage> {
           }
 
           final leaves = snapshot.data ?? [];
-          
-          // Only show empty state when we're sure there's no data
-          // (not during connection state changes)
-          if (leaves.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
-            return _buildEmptyState();
-          }
 
           final now = DateTime.now();
 
@@ -115,21 +122,52 @@ class _LeavePageState extends State<LeavePage> {
           final remainingAnnual = annualTotal - usedAnnual;
           final remainingSick = sickTotal - usedSick;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildLeaveBalancesSection(remainingAnnual, remainingSick),
-                const SizedBox(height: 20),
-                _buildUpcomingLeaveSection(upcomingLeaves),
-                const SizedBox(height: 20),
-                _buildPendingLeaveSection(pendingLeaves),
-                const SizedBox(height: 20),
-                _buildPastLeaveSection(pastLeaves),
-                const SizedBox(height: 80),
-              ],
-            ),
+          return Column(
+            children: [
+              // Leave Balances Section
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: _buildLeaveBalancesSection(remainingAnnual, remainingSick),
+              ),
+
+              // Tab Bar
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    borderRadius: BorderRadius.circular(25),
+                    color: const Color(0xFF3BAECC),
+                  ),
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.grey.shade700,
+                  tabs: const [
+                    Tab(text: 'Upcoming'),
+                    Tab(text: 'Pending'),
+                    Tab(text: 'Past'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Tab Bar View
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildUpcomingTab(upcomingLeaves),
+                    _buildPendingTab(pendingLeaves),
+                    _buildPastTab(pastLeaves),
+                  ],
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -150,20 +188,76 @@ class _LeavePageState extends State<LeavePage> {
   }
 
   // =============================
-  // EMPTY STATE
+  // TAB BUILDERS
   // =============================
-  Widget _buildEmptyState() {
-    return Padding(
+  Widget _buildUpcomingTab(List<Map<String, dynamic>> leaves) {
+    if (leaves.isEmpty) {
+      return _buildEmptyTabState(
+        icon: Icons.event_available,
+        message: "No upcoming leave",
+      );
+    }
+
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
+      itemCount: leaves.length,
+      itemBuilder: (context, index) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _buildUpcomingLeaveCard(leaves[index]),
+      ),
+    );
+  }
+
+  Widget _buildPendingTab(List<Map<String, dynamic>> leaves) {
+    if (leaves.isEmpty) {
+      return _buildEmptyTabState(
+        icon: Icons.pending_actions,
+        message: "No pending requests",
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: leaves.length,
+      itemBuilder: (context, index) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _buildPendingLeaveCard(leaves[index]),
+      ),
+    );
+  }
+
+  Widget _buildPastTab(List<Map<String, dynamic>> leaves) {
+    if (leaves.isEmpty) {
+      return _buildEmptyTabState(
+        icon: Icons.history,
+        message: "No past leave",
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: leaves.length,
+      itemBuilder: (context, index) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _buildPastLeaveCard(leaves[index]),
+      ),
+    );
+  }
+
+  Widget _buildEmptyTabState({required IconData icon, required String message}) {
+    return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildLeaveBalancesSection(annualTotal, sickTotal),
-          const SizedBox(height: 20),
-          _buildEmptySection("Upcoming Leave", "No upcoming leave"),
-          const SizedBox(height: 20),
-          _buildEmptySection("Pending Requests", "No pending requests"),
-          const SizedBox(height: 20),
-          _buildEmptySection("Past Leave", "No past leave"),
+          Icon(icon, size: 64, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 16,
+            ),
+          ),
         ],
       ),
     );
@@ -232,62 +326,56 @@ class _LeavePageState extends State<LeavePage> {
   }
 
   // =============================
-  // UPCOMING
+  // LEAVE CARD BUILDERS
   // =============================
-  Widget _buildUpcomingLeaveSection(List<Map<String, dynamic>> leaves) {
-    if (leaves.isEmpty) {
-      return _buildEmptySection("Upcoming Leave", "No upcoming leave");
-    }
+  Widget _buildUpcomingLeaveCard(Map<String, dynamic> leave) {
+    final leaveType = leave['leaveType'];
+    final start = (leave['startDate'] as Timestamp).toDate();
+    final end = (leave['endDate'] as Timestamp).toDate();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Upcoming Leave",
-          style: TextStyle(
-            color: Color(0xFF3BAECC),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+    final date = start == end
+        ? _formatDate(start)
+        : "${_formatDate(start)} - ${_formatDate(end)}";
+
+    return Container(
+      height: 90,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
         ),
-        const SizedBox(height: 10),
-        ...leaves.map((leave) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildUpcomingLeaveCard(leave),
-          );
-        }),
-      ],
-    );
-  }
-
-  // =============================
-  // PENDING (with delete)
-  // =============================
-  Widget _buildPendingLeaveSection(List<Map<String, dynamic>> leaves) {
-    if (leaves.isEmpty) {
-      return _buildEmptySection("Pending Requests", "No pending requests");
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Pending Requests",
-          style: TextStyle(
-            color: Color(0xFF3BAECC),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(leaveType,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(date, style: const TextStyle(color: Colors.white)),
+            ],
           ),
-        ),
-        const SizedBox(height: 10),
-        ...leaves.map((leave) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildPendingLeaveCard(leave),
-          );
-        }),
-      ],
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              "Approved",
+              style: TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -353,57 +441,6 @@ class _LeavePageState extends State<LeavePage> {
     );
   }
 
-  Widget _buildUpcomingLeaveCard(Map<String, dynamic> leave) {
-    final leaveType = leave['leaveType'];
-    final start = (leave['startDate'] as Timestamp).toDate();
-    final end = (leave['endDate'] as Timestamp).toDate();
-
-    final date = start == end
-        ? _formatDate(start)
-        : "${_formatDate(start)} - ${_formatDate(end)}";
-
-    return Container(
-      height: 90,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(leaveType,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(date, style: const TextStyle(color: Colors.white)),
-            ],
-          ),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.green,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              "Approved",
-              style: TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPastLeaveCard(Map<String, dynamic> leave) {
     final leaveType = leave['leaveType'];
     final start = (leave['startDate'] as Timestamp).toDate();
@@ -454,61 +491,6 @@ class _LeavePageState extends State<LeavePage> {
           ),
         ],
       ),
-    );
-  }
-
-  // =============================
-  // PAST
-  // =============================
-  Widget _buildPastLeaveSection(List<Map<String, dynamic>> leaves) {
-    if (leaves.isEmpty) {
-      return _buildEmptySection("Past Leave", "No past leave");
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Past Leave",
-          style: TextStyle(
-            color: Color(0xFF3BAECC),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 10),
-        ...leaves.map((leave) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildPastLeaveCard(leave),
-          );
-        }),
-      ],
-    );
-  }
-
-
-  Widget _buildEmptySection(String title, String text) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title,
-            style: const TextStyle(
-              color: Color(0xFF3BAECC),
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            )),
-        const SizedBox(height: 10),
-        Container(
-          height: 90,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(text, style: const TextStyle(color: Colors.grey)),
-        ),
-      ],
     );
   }
 
