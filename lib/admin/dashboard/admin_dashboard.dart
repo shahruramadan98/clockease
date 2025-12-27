@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../controllers/user_provider.dart';
+import '../attendance/attendance_management_page.dart';
 import 'widgets/greeting_card.dart';
 import 'widgets/quick_action_card.dart';
 
@@ -95,7 +96,14 @@ class AdminDashboard extends ConsumerWidget {
                         subtitle: "View all staff",
                         icon: Icons.list_alt,
                         onTap: () {
-                          // TODO: Navigate to Attendance Overview
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AttendanceManagementPage(
+                                companyId: companyId,
+                              ),
+                            ),
+                          );
                         },
                       ),
                     ),

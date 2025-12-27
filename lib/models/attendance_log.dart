@@ -13,6 +13,13 @@ class AttendanceLog {
   final double? longitude;
   final double? accuracy;
   final String? address;
+  
+  // Admin amendment fields
+  final DateTime? adminAmendedClockIn;
+  final DateTime? adminAmendedClockOut;
+  final int? adminAmendedTotalMinutes;
+  final String? adminNotes;
+  final String? adminOverrideStatus; // "onTime", "late", "absent", or null for auto-calculated
 
   AttendanceLog({
     this.id,
@@ -23,6 +30,11 @@ class AttendanceLog {
     this.longitude,
     this.accuracy,
     this.address,
+    this.adminAmendedClockIn,
+    this.adminAmendedClockOut,
+    this.adminAmendedTotalMinutes,
+    this.adminNotes,
+    this.adminOverrideStatus,
   });
 
   factory AttendanceLog.fromMap(Map<String, dynamic> map, String id) {
@@ -34,6 +46,12 @@ class AttendanceLog {
     DateTime toDate(dynamic v) {
       if (v is Timestamp) return v.toDate();
       return DateTime.now();
+    }
+
+    DateTime? toNullableDate(dynamic v) {
+      if (v == null) return null;
+      if (v is Timestamp) return v.toDate();
+      return null;
     }
 
     // Extract location data if present
@@ -48,6 +66,11 @@ class AttendanceLog {
       longitude: locationMap?['longitude']?.toDouble(),
       accuracy: locationMap?['accuracy']?.toDouble(),
       address: locationMap?['address'],
+      adminAmendedClockIn: toNullableDate(map['adminAmendedClockIn']),
+      adminAmendedClockOut: toNullableDate(map['adminAmendedClockOut']),
+      adminAmendedTotalMinutes: map['adminAmendedTotalMinutes'] as int?,
+      adminNotes: map['adminNotes'] as String?,
+      adminOverrideStatus: map['adminOverrideStatus'] as String?,
     );
   }
 
@@ -66,6 +89,23 @@ class AttendanceLog {
         'accuracy': accuracy,
         if (address != null) 'address': address,
       };
+    }
+    
+    // Add admin amendment fields if present
+    if (adminAmendedClockIn != null) {
+      map['adminAmendedClockIn'] = Timestamp.fromDate(adminAmendedClockIn!);
+    }
+    if (adminAmendedClockOut != null) {
+      map['adminAmendedClockOut'] = Timestamp.fromDate(adminAmendedClockOut!);
+    }
+    if (adminAmendedTotalMinutes != null) {
+      map['adminAmendedTotalMinutes'] = adminAmendedTotalMinutes;
+    }
+    if (adminNotes != null && adminNotes!.isNotEmpty) {
+      map['adminNotes'] = adminNotes;
+    }
+    if (adminOverrideStatus != null && adminOverrideStatus!.isNotEmpty) {
+      map['adminOverrideStatus'] = adminOverrideStatus;
     }
 
     return map;

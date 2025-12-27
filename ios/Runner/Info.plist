@@ -47,5 +47,9 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>ClockEase needs your location to verify your attendance location when you clock in or out.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ClockEase needs access to your camera for face detection during clock in and clock out.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ClockEase needs access to your photo library to upload attachments for leave applications.</string>
 </dict>
 </plist>
