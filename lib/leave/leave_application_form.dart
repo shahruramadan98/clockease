@@ -196,6 +196,16 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
       return;
     }
 
+    if (_durationDays == 0.5 && startDate != endDate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Half-day leave must be for a single date"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (!_canSubmit) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -396,6 +406,11 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
 
                           setState(() {
                             _durationDays = value;
+
+                            // Half Day → force single date
+                            if (_durationDays == 0.5 && startDate != null) {
+                              endDate = startDate;
+                            }
                           });
 
                           await _recalculateRemainingLeave();
@@ -456,8 +471,13 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
               onPick: (d) {
                 setState(() {
                   startDate = d;
-                  if (endDate != null && endDate!.isBefore(d)) {
-                    endDate = null;
+
+                  if (_durationDays == 0.5) {
+                    endDate = d;
+                  } else {
+                    if (endDate != null && endDate!.isBefore(d)) {
+                      endDate = null;
+                    }
                   }
                 });
               },
@@ -471,7 +491,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
             _datePicker(
               label: "End Date",
               date: endDate,
-              disabled: startDate == null,
+              disabled: startDate == null || _durationDays == 0.5,
               minDate: startDate,
               onPick: (d) => setState(() => endDate = d),
             ),
