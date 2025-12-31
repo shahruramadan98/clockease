@@ -46,7 +46,7 @@ class _AdminHomeState extends State<AdminHome> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           tooltip: 'Back to Staff',
           onPressed: () {
-            Navigator.pop(context); // 👈 BACK TO STAFF MODE
+            Navigator.pop(context); // BACK TO STAFF MODE
           },
         ),
       ),

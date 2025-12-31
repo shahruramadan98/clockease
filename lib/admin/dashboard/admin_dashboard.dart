@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../controllers/user_provider.dart';
 import '../attendance/attendance_management_page.dart';
+import '../settings/leave_policy_page.dart';
 import 'widgets/greeting_card.dart';
 import 'widgets/quick_action_card.dart';
 
@@ -114,7 +115,14 @@ class AdminDashboard extends ConsumerWidget {
                         subtitle: "Policies & settings",
                         icon: Icons.business,
                         onTap: () {
-                          // TODO: Navigate to Company Setup
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LeavePolicyPage(
+                                companyId: companyId,
+                              ),
+                            ),
+                          );
                         },
                       ),
                     ),
