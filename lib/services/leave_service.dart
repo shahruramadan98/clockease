@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+
 import '../models/leave_info.dart';
 
 class LeaveService {
@@ -18,6 +18,7 @@ class LeaveService {
     required String leaveType,
     required DateTime startDate,
     required DateTime endDate,
+    required double durationDays,
     String? reason,
     String? attachmentUrl,
   }) async {
@@ -31,6 +32,7 @@ class LeaveService {
       'leaveType': leaveType,
       'startDate': Timestamp.fromDate(startDate),
       'endDate': Timestamp.fromDate(endDate),
+      'durationDays': durationDays,
       'status': 'pending',
       'createdAt': Timestamp.now(),
     };
@@ -185,5 +187,29 @@ class LeaveService {
       default:
         return null;
     }
+  }
+
+  // ===============================
+  // GET USED LEAVE DAYS BY TYPE
+  // ===============================
+  Future<double> getUsedLeaveDays(String leaveType) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return 0.0;
+
+    final snap = await _firestore
+        .collection('leave_applications')
+        .where('userId', isEqualTo: user.uid)
+        .where('leaveType', isEqualTo: leaveType)
+        .where('status', isEqualTo: 'approved')
+        .get();
+
+    double totalDays = 0.0;
+
+    for (final doc in snap.docs) {
+      final duration = (doc.data()['durationDays'] as num?)?.toDouble() ?? 1.0;
+      totalDays += duration;
+    }
+
+    return totalDays;
   }
 }

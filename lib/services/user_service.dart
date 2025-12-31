@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_profile.dart';
+import '../models/leave_policy.dart';
 
 class UserService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -106,5 +107,18 @@ class UserService {
       print('❌ Error updating profile: $e');
       rethrow;
     }
+  }
+
+  Future<LeavePolicy?> getLeavePolicy(String companyId) async {
+    final snap = await _db
+        .collection('companies')
+        .doc(companyId)
+        .collection('settings')
+        .doc('leave_policy')
+        .get();
+
+    if (!snap.exists || snap.data() == null) return null;
+
+    return LeavePolicy.fromMap(snap.data()!);
   }
 }

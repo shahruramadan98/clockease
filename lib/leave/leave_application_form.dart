@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../services/leave_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/user_service.dart';
 import 'package:file_picker/file_picker.dart';
+import '../services/user_service.dart';
+import '../services/leave_service.dart';
+import '../services/company_settings_service.dart';
+import '../models/leave_policy.dart';
 
 
 class LeaveApplicationForm extends StatefulWidget {
@@ -15,13 +17,19 @@ class LeaveApplicationForm extends StatefulWidget {
 class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
   final LeaveService _leaveService = LeaveService();
   final TextEditingController _reasonController = TextEditingController();
+  final CompanySettingsService _settingsService = CompanySettingsService();
+  final UserService _userService = UserService();
 
   String? selectedLeaveType;
   DateTime? startDate;
   DateTime? endDate;
   PlatformFile? _selectedFile;
+  LeavePolicy? _leavePolicy;
 
+  double _remainingLeaveDays = 0.0;
+  bool _policyLoading = true;
   bool _isSubmitting = false;
+  double _durationDays = 1.0; // default full day
 
   @override
   void dispose() {
@@ -38,15 +46,106 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
   }
 
   String _calculateDuration() {
-    if (startDate == null || endDate == null) return '0';
-    
-    // Check if it's a half-day leave
-    if (selectedLeaveType == 'Half Day (AM)' || selectedLeaveType == 'Half Day (PM)') {
-      return '0.5';
-    }
-    
-    // Normal day calculation
+    if (startDate == null || endDate == null) return "0";
+
+    if (_durationDays == 0.5) return "0.5";
+
     return '${endDate!.difference(startDate!).inDays + 1}';
+  }
+
+  Future<void> _loadLeavePolicy() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final companyId = await _userService.getCompanyIdForUser(user.uid);
+    if (companyId == null) return;
+
+    final policy = await _settingsService.getLeavePolicy(companyId);
+
+    if (!mounted) return;
+    setState(() {
+      _leavePolicy = policy;
+      _policyLoading = false; 
+    });
+
+    if (selectedLeaveType != null) {
+      await _recalculateRemainingLeave();
+    }
+  }
+
+  Future<void> _recalculateRemainingLeave() async {
+    if (_leavePolicy == null || selectedLeaveType == null) return;
+
+    if (['Unpaid', 'Emergency', 'Replacement Leave'].contains(selectedLeaveType)) {
+      setState(() => _remainingLeaveDays = double.infinity);
+      return;
+    }
+
+    final double used =
+        await _leaveService.getUsedLeaveDays(selectedLeaveType!);
+
+    double total = 0.0;
+    if (selectedLeaveType == 'Annual') {
+      total = _leavePolicy!.annualLeave.toDouble();
+    } else if (selectedLeaveType == 'Sick') {
+      total = _leavePolicy!.sickLeave.toDouble();
+    }
+
+    setState(() {
+      _remainingLeaveDays = (total - used).clamp(0.0, total);
+    });
+  }
+
+  double get _previewRemainingBalance {
+    if (selectedLeaveType == null ||
+        ['Unpaid', 'Emergency', 'Replacement Leave']
+            .contains(selectedLeaveType)) {
+      return double.infinity;
+    }
+
+    if (startDate == null || endDate == null) {
+      return _remainingLeaveDays;
+    }
+
+    double previewDuration;
+
+    if (_durationDays == 0.5) {
+      previewDuration = 0.5;
+    } else {
+      previewDuration =
+          endDate!.difference(startDate!).inDays + 1;
+    }
+
+    return (_remainingLeaveDays - previewDuration)
+        .clamp(0.0, double.infinity);
+  }
+
+  List<String> get _leaveTypeOptions {
+    return const [
+      'Annual',
+      'Sick',
+      'Emergency',
+      'Unpaid',
+      'Replacement Leave',
+    ];
+  }
+
+  bool get _canSubmit {
+    if (selectedLeaveType == null || startDate == null || endDate == null) {
+      return false;
+    }
+
+    if (['Unpaid', 'Emergency', 'Replacement Leave'].contains(selectedLeaveType)) {
+      return true;
+    }
+
+    return _durationDays <= _remainingLeaveDays;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLeavePolicy();
   }
 
   Future<void> _pickFile() async {
@@ -78,11 +177,29 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
     });
   }
 
+  String _formatDays(double days) {
+    // Show 1 decimal only if needed
+    if (days % 1 == 0) {
+      return days.toInt().toString(); // 5.0 → "5"
+    }
+    return days.toStringAsFixed(1);   // 4.5 → "4.5"
+  }
+
   Future<void> submitLeave() async {
     if (selectedLeaveType == null || startDate == null || endDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please complete all fields"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!_canSubmit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Insufficient leave balance"),
           backgroundColor: Colors.red,
         ),
       );
@@ -125,6 +242,26 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
         }
       }
 
+      if (_durationDays == 0.5 && _leavePolicy?.halfDayAllowed != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Half-day leave is not allowed by company policy"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      double calculatedDuration;
+
+      if (_durationDays == 0.5) {
+        calculatedDuration = 0.5;
+      } else {
+        calculatedDuration =
+            endDate!.difference(startDate!).inDays + 1;
+      }
+
+
       await _leaveService.submitLeave(
         companyId: companyId,
         userName: profile.fullName,
@@ -132,6 +269,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
         leaveType: selectedLeaveType!,
         startDate: startDate!,
         endDate: endDate!,
+        durationDays: calculatedDuration,
         reason: _reasonController.text.trim().isEmpty ? null : _reasonController.text.trim(),
         attachmentUrl: attachmentUrl,
       );
@@ -155,6 +293,11 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
 
   @override
   Widget build(BuildContext context) {
+    if (_policyLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -204,21 +347,78 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                     labelText: "Leave Type",
                     border: OutlineInputBorder(),
                   ),
-                  items: const ['Annual', 'Sick', 'Emergency', 'Unpaid', 'Replacement Leave', 'Half Day (AM)', 'Half Day (PM)']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  items: _leaveTypeOptions
+                      .map(
+                        (type) => DropdownMenuItem<String>(
+                          value: type,
+                          child: Text(type),
+                        ),
+                      )
                       .toList(),
-                  onChanged: (v) {
+                  onChanged: (v) async {
                     setState(() {
                       selectedLeaveType = v;
-                      // Clear attachment if switching away from sick leave
+
                       if (v != 'Sick') {
                         _selectedFile = null;
                       }
                     });
+
+                    await _recalculateRemainingLeave();
                   },
                 ),
               ),
             ),
+
+            if (_leavePolicy?.halfDayAllowed == true &&
+                ['Annual', 'Sick', 'Replacement Leave'].contains(selectedLeaveType)) ...[
+              const SizedBox(height: 16),
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Duration",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+
+                      RadioGroup<double>(
+                        groupValue: _durationDays,
+                        onChanged: (double? value) async {
+                          if (value == null) return;
+
+                          setState(() {
+                            _durationDays = value;
+                          });
+
+                          await _recalculateRemainingLeave();
+                        },
+                        child: const Column(
+                          children: [
+                            RadioListTile<double>(
+                              title: Text("Full Day"),
+                              value: 1.0,
+                            ),
+                            RadioListTile<double>(
+                              title: Text("Half Day"),
+                              value: 0.5,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
 
             const SizedBox(height: 16),
 
@@ -276,7 +476,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
               onPick: (d) => setState(() => endDate = d),
             ),
 
-            if (startDate != null && endDate != null)
+            if (startDate != null && endDate != null) ...[
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
@@ -287,6 +487,22 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
                   ),
                 ),
               ),
+
+              if (selectedLeaveType != null &&
+                !['Unpaid', 'Emergency', 'Replacement Leave']
+                    .contains(selectedLeaveType))
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  "Remaining balance: ${_formatDays(_previewRemainingBalance)} day(s)",
+                  style: TextStyle(
+                    color: _canSubmit ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+
 
             // =====================
             // ATTACHMENT (SICK LEAVE ONLY)
@@ -398,7 +614,7 @@ class _LeaveApplicationFormState extends State<LeaveApplicationForm> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _isSubmitting ? null : submitLeave,
+                onPressed: (_isSubmitting || !_canSubmit) ? null : submitLeave,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF3BAECC),
                   foregroundColor: Colors.white,

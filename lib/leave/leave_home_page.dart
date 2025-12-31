@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+
 import '../services/leave_service.dart';
+import '../services/company_settings_service.dart';
+import '../services/user_service.dart';
+
+import '../models/leave_policy.dart';
+
 import 'leave_application_form.dart';
 
 class LeavePage extends StatefulWidget {
@@ -13,26 +20,29 @@ class LeavePage extends StatefulWidget {
 
 class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMixin {
   final LeaveService _leaveService = LeaveService();
+  final CompanySettingsService _settingsService = CompanySettingsService();
+  final UserService _userService = UserService();
   final DateFormat dateFormatter = DateFormat('dd/MM/yyyy');
   late TabController _tabController;
 
-  static const int annualTotal = 15;
-  static const int sickTotal = 7;
+  LeavePolicy? _leavePolicy;
+  bool _policyLoading = true;
+  bool _isHalfDay(Map<String, dynamic> leave) {
+    final duration = (leave['durationDays'] as num?)?.toDouble() ?? 0;
+    return duration == 0.5;
+  }
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadLeavePolicy();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  int calculateDays(DateTime start, DateTime end) {
-    return end.difference(start).inDays + 1;
   }
 
   String _formatDate(DateTime date) {
@@ -45,6 +55,15 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    if (_policyLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final annualTotal = _leavePolicy?.annualLeave ?? 0;
+    final sickTotal = _leavePolicy?.sickLeave ?? 0;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -81,33 +100,45 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
 
           final now = DateTime.now();
 
-          int usedAnnual = 0;
-          int usedSick = 0;
+          double usedAnnual = 0.0;
+          double usedSick = 0.0;
 
           final upcomingLeaves = <Map<String, dynamic>>[];
           final pendingLeaves = <Map<String, dynamic>>[];
           final pastLeaves = <Map<String, dynamic>>[];
 
           for (final leave in leaves) {
+          //final startDate = (leave['startDate'] as Timestamp).toDate();
+          final endDate = (leave['endDate'] as Timestamp).toDate();
+          final status = leave['status'] as String;
+
+          double duration = 0.0;
+
+          // New system (preferred)
+          if (leave.containsKey('durationDays')) {
+            duration = (leave['durationDays'] as num).toDouble();
+          } 
+          // Old system fallback
+          else {
             final startDate = (leave['startDate'] as Timestamp).toDate();
             final endDate = (leave['endDate'] as Timestamp).toDate();
-            final status = leave['status'] as String;
-            final days = calculateDays(startDate, endDate);
-
-            if (status == 'approved') {
-              if (leave['leaveType'] == 'Annual') usedAnnual += days;
-              if (leave['leaveType'] == 'Sick') usedSick += days;
-            }
-
-            if (status == 'pending') {
-              pendingLeaves.add(leave);
-            } else if (status == 'approved' &&
-                endDate.isAfter(now.subtract(const Duration(days: 1)))) {
-              upcomingLeaves.add(leave);
-            } else {
-              pastLeaves.add(leave);
-            }
+            duration = endDate.difference(startDate).inDays + 1;
           }
+
+          if (status == 'approved') {
+            if (leave['leaveType'] == 'Annual') usedAnnual += duration;
+            if (leave['leaveType'] == 'Sick') usedSick += duration;
+          }
+
+          if (status == 'pending') {
+            pendingLeaves.add(leave);
+          } else if (status == 'approved' &&
+              endDate.isAfter(now.subtract(const Duration(days: 1)))) {
+            upcomingLeaves.add(leave);
+          } else {
+            pastLeaves.add(leave);
+          }
+        }
 
           upcomingLeaves.sort((a, b) =>
               (a['startDate'] as Timestamp)
@@ -119,15 +150,20 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
                   .toDate()
                   .compareTo((a['endDate'] as Timestamp).toDate()));
 
-          final remainingAnnual = annualTotal - usedAnnual;
-          final remainingSick = sickTotal - usedSick;
+          final remainingAnnual = (annualTotal - usedAnnual).clamp(0, annualTotal).toDouble();
+          final remainingSick = (sickTotal - usedSick).clamp(0, sickTotal).toDouble();
 
           return Column(
             children: [
               // Leave Balances Section
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: _buildLeaveBalancesSection(remainingAnnual, remainingSick),
+                child: _buildLeaveBalancesSection(
+                  remainingAnnual,
+                  remainingSick,
+                  annualTotal,
+                  sickTotal,
+                ),
               ),
 
               // Tab Bar
@@ -266,7 +302,12 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
   // =============================
   // LEAVE BALANCES
   // =============================
-  Widget _buildLeaveBalancesSection(int annual, int sick) {
+  Widget _buildLeaveBalancesSection(
+    double remainingAnnual,
+    double remainingSick,
+    int annualTotal,
+    int sickTotal,
+    ) {
     return Card(
       color: const Color(0xFF3BAECC),
       child: Padding(
@@ -283,13 +324,17 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
               ),
             ),
             const SizedBox(height: 12),
-            _balanceItem("Annual Leave", annual, annual / annualTotal),
+            _balanceItem(
+              "Annual Leave",
+              remainingAnnual,
+              annualTotal == 0 ? 0 : remainingAnnual / annualTotal,
+            ),
             const SizedBox(height: 10),
             Divider(color: Colors.white.withOpacity(0.5)),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _simpleBalance("Sick Leave", sick),
+                _simpleBalance("Sick Leave", remainingSick),
                 _simpleBalance("Unpaid Leave", 0),
               ],
             ),
@@ -299,15 +344,20 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _balanceItem(String label, int days, double progress) {
+  Widget _balanceItem(String label, double days, double progress) {
+    final displayDays =
+        days % 1 == 0 ? days.toInt().toString() : days.toStringAsFixed(1);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("$label ($days days)",
-            style: const TextStyle(color: Colors.white)),
+        Text(
+          "$label ($displayDays days)",
+          style: const TextStyle(color: Colors.white),
+        ),
         const SizedBox(height: 6),
         LinearProgressIndicator(
-          value: progress.clamp(0, 1),
+          value: progress.clamp(0.0, 1.0),
           backgroundColor: Colors.white24,
           valueColor: const AlwaysStoppedAnimation(Colors.white),
         ),
@@ -315,12 +365,16 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _simpleBalance(String label, int days) {
+  Widget _simpleBalance(String label, double days) {
+    final displayDays =
+        days % 1 == 0 ? days.toInt().toString() : days.toStringAsFixed(1);
+
     return Column(
       children: [
         Text(label, style: const TextStyle(color: Colors.white)),
         const SizedBox(height: 4),
-        Text("$days days", style: const TextStyle(color: Colors.white)),
+        Text("$displayDays days",
+            style: const TextStyle(color: Colors.white)),
       ],
     );
   }
@@ -353,10 +407,35 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(leaveType,
-                  style: const TextStyle(
+              Row(
+                children: [
+                  Text(
+                    leaveType,
+                    style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (_isHalfDay(leave)) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        "½ Day",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
               const SizedBox(height: 4),
               Text(date, style: const TextStyle(color: Colors.white)),
             ],
@@ -405,10 +484,35 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(leaveType,
-                  style: const TextStyle(
+              Row(
+                children: [
+                  Text(
+                    leaveType,
+                    style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (_isHalfDay(leave)) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        "½ Day",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
               const SizedBox(height: 4),
               Text(date, style: const TextStyle(color: Colors.white)),
             ],
@@ -468,10 +572,35 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(leaveType,
-                  style: const TextStyle(
+              Row(
+                children: [
+                  Text(
+                    leaveType,
+                    style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.bold)),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (_isHalfDay(leave)) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        "½ Day",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
               const SizedBox(height: 4),
               Text(date, style: const TextStyle(color: Colors.white)),
             ],
@@ -521,4 +650,22 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
           .delete();
     }
   }
+
+  Future<void> _loadLeavePolicy() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final companyId = await _userService.getCompanyIdForUser(user.uid);
+    if (companyId == null) return;
+
+    final policy = await _settingsService.getLeavePolicy(companyId);
+
+    if (!mounted) return;
+
+    setState(() {
+      _leavePolicy = policy;
+      _policyLoading = false;
+    });
+  }
+
 }
