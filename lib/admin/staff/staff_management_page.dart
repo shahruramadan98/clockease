@@ -12,134 +12,141 @@ class StaffManagementPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ==========================
-          // PAGE TITLE
-          // ==========================
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Staff Management',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF3F51B5)
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Create and manage staff accounts',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF4CBFDA),
+        title: const Text(
+          'Staff Management',
+          style: TextStyle(
+            color: Color.fromARGB(255, 255, 255, 255),
           ),
-
-          // ==========================
-          // CONTENT
-          // ==========================
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('companies')
-                  .doc(companyId)
-                  .collection('employees')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-
-                final staff = snapshot.data!.docs;
-
-                if (staff.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No staff added yet',
-                      style: TextStyle(color: Colors.grey),
+        ),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color.fromARGB(255, 255, 255, 255)),
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ==========================
+            // PAGE TITLE
+            // ==========================
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Staff Management',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3F51B5),
                     ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding:
-                      const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  itemCount: staff.length,
-                  itemBuilder: (context, index) {
-                    final emp = staff[index];
-
-                    return Card(
-                      margin:
-                          const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        title: Text(emp['fullName']),
-                        subtitle: Text(emp['designation']),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Chip(
-                              label: Text(
-                                emp['isAdmin'] ? 'Admin' : 'Staff',
-                                style: const TextStyle(
-                                    color: Colors.white),
-                              ),
-                              backgroundColor: emp['isAdmin']
-                                  ? Colors.blue
-                                  : const Color.fromARGB(255, 158, 158, 158),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Color(0xFF3470D9)),
-                              onPressed: () => _showEditStaffDialog(context, emp),
-                              tooltip: 'Edit Staff',
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _showDeleteConfirmDialog(context, emp),
-                              tooltip: 'Delete User',
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-
-          // ==========================
-          // ADD STAFF BUTTON
-          // ==========================
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.person_add, color: Color.fromARGB(255, 255, 255, 255),),
-                label: const Text(
-                  'Add Staff',
-                  style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
                   ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3BAECC),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 14),
-                ),
-                onPressed: () =>
-                    _showAddStaffDialog(context),
+                  SizedBox(height: 4),
+                  Text(
+                    'Create and manage staff accounts',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+
+            // ==========================
+            // CONTENT
+            // ==========================
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('companies')
+                    .doc(companyId)
+                    .collection('employees')
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final staff = snapshot.data!.docs;
+
+                  if (staff.isEmpty) {
+                    return const Center(
+                      child: Text(
+                        'No staff added yet',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    itemCount: staff.length,
+                    itemBuilder: (context, index) {
+                      final emp = staff[index];
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        child: ListTile(
+                          title: Text(emp['fullName']),
+                          subtitle: Text(emp['designation']),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Chip(
+                                label: Text(
+                                  emp['isAdmin'] ? 'Admin' : 'Staff',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: emp['isAdmin']
+                                    ? Colors.blue
+                                    : Colors.grey,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Color(0xFF3470D9)),
+                                onPressed: () =>
+                                    _showEditStaffDialog(context, emp),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () =>
+                                    _showDeleteConfirmDialog(context, emp),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+
+            // ==========================
+            // ADD STAFF BUTTON
+            // ==========================
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.person_add, color: Colors.white),
+                  label: const Text(
+                    'Add Staff',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3BAECC),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () => _showAddStaffDialog(context),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

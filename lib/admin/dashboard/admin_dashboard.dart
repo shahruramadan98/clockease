@@ -5,6 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../controllers/user_provider.dart';
 import '../attendance/attendance_management_page.dart';
 import '../settings/leave_policy_page.dart';
+import '../leave/leave_approval_page.dart';
+import '../staff/staff_management_page.dart';
+
 import 'widgets/greeting_card.dart';
 import 'widgets/quick_action_card.dart';
 
@@ -69,7 +72,14 @@ class AdminDashboard extends ConsumerWidget {
                         subtitle: "Pending requests",
                         icon: Icons.approval,
                         onTap: () {
-                          // TO DO
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => LeaveApprovalPage(
+                                companyId: companyId,
+                              ),
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -80,7 +90,14 @@ class AdminDashboard extends ConsumerWidget {
                         subtitle: "Create staff account",
                         icon: Icons.person_add,
                         onTap: () {
-                          // TO DO
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StaffManagementPage(
+                                companyId: companyId,
+                              ),
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -111,8 +128,8 @@ class AdminDashboard extends ConsumerWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: QuickActionCard(
-                        title: "Company Setup",
-                        subtitle: "Policies & settings",
+                        title: "Company Leave Policy",
+                        subtitle: "Policies & Settings",
                         icon: Icons.business,
                         onTap: () {
                           Navigator.push(

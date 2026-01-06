@@ -43,80 +43,85 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage>
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ==========================
-          // PAGE HEADER
-          // ==========================
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Leave Management',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF3F51B5),
+    return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF4CBFDA),
+        title: const Text(
+          'Leave Management',
+          style: TextStyle(
+            color: Color.fromARGB(255, 254, 254, 254),
+          ),
+        ),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color.fromARGB(255, 255, 255, 255)),
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // PAGE HEADER
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Leave Management',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3F51B5),
+                    ),
                   ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Review and manage staff leave requests',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-
-          // ==========================
-          // TAB BAR
-          // ==========================
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                color: const Color(0xFF3F51B5),
+                  SizedBox(height: 4),
+                  Text(
+                    'Review and manage staff leave requests',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
               ),
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.grey.shade700,
-              tabs: const [
-                Tab(text: 'Pending'),
-                Tab(text: 'Approved'),
-                Tab(text: 'Rejected'),
-              ],
             ),
-          ),
 
-          const SizedBox(height: 16),
-
-          // ==========================
-          // TAB BAR VIEW
-          // ==========================
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Pending leaves
-                _buildLeaveList('pending', showActions: true),
-                // Approved leaves
-                _buildLeaveList('approved', showActions: false),
-                // Rejected leaves
-                _buildLeaveList('rejected', showActions: false),
-              ],
+            // TAB BAR
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(25),
+                  color: const Color(0xFF3F51B5),
+                ),
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.grey.shade700,
+                tabs: const [
+                  Tab(text: 'Pending'),
+                  Tab(text: 'Approved'),
+                  Tab(text: 'Rejected'),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 16),
+
+            // TAB CONTENT
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildLeaveList('pending', showActions: true),
+                  _buildLeaveList('approved', showActions: false),
+                  _buildLeaveList('rejected', showActions: false),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

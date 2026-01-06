@@ -55,30 +55,6 @@ class _AdminHomeState extends State<AdminHome> {
       // BODY
       // ======================
       body: _screens[_currentIndex],
-
-      // ======================
-      // BOTTOM NAV (ADMIN)
-      // ======================
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
-        selectedItemColor: const Color(0xFF3470D9),
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: "Dashboard",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.approval),
-            label: "Leave",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: "Staff",
-          ),
-        ],
-      ),
     );
   }
 }

@@ -74,7 +74,15 @@ class _LeavePolicyPageState extends State<LeavePolicyPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Leave Policy"),
+        backgroundColor: const Color(0xFF4CBFDA),
+        title: const Text(
+          'Company Leave Policy',
+          style: TextStyle(
+            color: Color.fromARGB(255, 254, 254, 254),
+          ),
+        ),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color.fromARGB(255, 255, 255, 255)),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -104,6 +112,13 @@ class _LeavePolicyPageState extends State<LeavePolicyPage> {
               height: 48,
               child: ElevatedButton(
                 onPressed: _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3BAECC),
+                  foregroundColor: Colors.white, // text color
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                ),
                 child: const Text("Save Policy"),
               ),
             ),
