@@ -30,6 +30,17 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage>
     super.dispose();
   }
 
+  String _fmtRange(Map<String, dynamic> data) {
+    final start = (data['startDate'] as Timestamp).toDate();
+    final end = (data['endDate'] as Timestamp).toDate();
+
+    if (start == end) {
+      return '${start.day}/${start.month}/${start.year}';
+    }
+
+    return '${start.day}/${start.month}–${end.day}/${end.month}/${end.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -354,9 +365,26 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage>
     DocumentReference ref,
     String status,
   ) async {
+    final snap = await ref.get();
+    final data = snap.data() as Map<String, dynamic>;
+
     await ref.update({
       'status': status,
       'actionAt': FieldValue.serverTimestamp(),
+    });
+
+    // 🔔 Create notification for staff
+    await FirebaseFirestore.instance.collection('notifications').add({
+      'userId': data['userId'], // staff UID
+      'title': status == 'approved'
+          ? 'Leave Approved'
+          : 'Leave Rejected',
+      'message':
+          'Your ${data['leaveType']} leave (${_fmtRange(data)}) was $status.',
+      'leaveId': ref.id,
+      'type': 'leave',
+      'isRead': false,
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 

@@ -10,6 +10,7 @@ import '../services/user_service.dart';
 import '../models/leave_policy.dart';
 
 import 'leave_application_form.dart';
+import 'leave_notifications_page.dart';
 
 class LeavePage extends StatefulWidget {
   const LeavePage({super.key});
@@ -53,6 +54,47 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
+  Stream<QuerySnapshot> _notificationStream(String userId) {
+    return FirebaseFirestore.instance
+        .collection('notifications')
+        .where('userId', isEqualTo: userId)
+        .where('type', isEqualTo: 'leave')
+        .where('isRead', isEqualTo: false)
+        .orderBy('createdAt', descending: true)
+        .limit(5)
+        .snapshots();
+  }
+
+  Stream<int> _unreadNotificationCount() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      return const Stream.empty();
+    }
+
+    return FirebaseFirestore.instance
+        .collection('notifications')
+        .where('userId', isEqualTo: uid)
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snap) => snap.docs.length);
+  }
+
+  Future<void> _markLeaveNotificationRead(String leaveId) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final snap = await FirebaseFirestore.instance
+        .collection('notifications')
+        .where('userId', isEqualTo: uid)
+        .where('leaveId', isEqualTo: leaveId)
+        .where('isRead', isEqualTo: false)
+        .get();
+
+    for (final doc in snap.docs) {
+      await doc.reference.update({'isRead': true});
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_policyLoading) {
@@ -63,6 +105,8 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
 
     final annualTotal = _leavePolicy?.annualLeave ?? 0;
     final sickTotal = _leavePolicy?.sickLeave ?? 0;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    debugPrint('Notification page UID = $uid');
 
     return Scaffold(
       appBar: AppBar(
@@ -72,6 +116,52 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
         ),
         backgroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          StreamBuilder<int>(
+            stream: _unreadNotificationCount(),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications, color: Color(0xFF3F51B5)),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LeaveNotificationsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                        child: Text(
+                          count.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
 
       body: StreamBuilder<List<Map<String, dynamic>>>(
@@ -152,9 +242,46 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
 
           final remainingAnnual = (annualTotal - usedAnnual).clamp(0, annualTotal).toDouble();
           final remainingSick = (sickTotal - usedSick).clamp(0, sickTotal).toDouble();
+          final user = FirebaseAuth.instance.currentUser;
 
           return Column(
             children: [
+              if (user != null)
+              StreamBuilder<QuerySnapshot>(
+                stream: _notificationStream(user.uid),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Column(
+                      children: snapshot.data!.docs.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+
+                        return Card(
+                          color: Colors.blue.shade50,
+                          child: ListTile(
+                            leading: const Icon(Icons.notifications_active),
+                            title: Text(
+                              data['title'],
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(data['message']),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                doc.reference.update({'isRead': true});
+                              },
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  );
+                },
+              ),
               // Leave Balances Section
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -384,6 +511,7 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
   // =============================
   Widget _buildUpcomingLeaveCard(Map<String, dynamic> leave) {
     final leaveType = leave['leaveType'];
+    final leaveId = leave['id'];
     final start = (leave['startDate'] as Timestamp).toDate();
     final end = (leave['endDate'] as Timestamp).toDate();
 
@@ -391,162 +519,177 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
         ? _formatDate(start)
         : "${_formatDate(start)} - ${_formatDate(end)}";
 
-    return Container(
-      height: 90,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
+    return InkWell(
+      onTap: () async {
+        if (leaveId != null) {
+          await _markLeaveNotificationRead(leaveId);
+        }
+      },
+      child: Container(
+        height: 90,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    leaveType,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (_isHalfDay(leave)) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.25),
-                        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      leaveType,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: const Text(
-                        "½ Day",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    if (_isHalfDay(leave)) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          "½ Day",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
+                const SizedBox(height: 4),
+                Text(date, style: const TextStyle(color: Colors.white)),
+              ],
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.green,
+                borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(height: 4),
-              Text(date, style: const TextStyle(color: Colors.white)),
-            ],
-          ),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.green,
-              borderRadius: BorderRadius.circular(20),
+              child: const Text(
+                "Approved",
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
             ),
-            child: const Text(
-              "Approved",
-              style: TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+          ],
+        )
       ),
     );
   }
 
   Widget _buildPendingLeaveCard(Map<String, dynamic> leave) {
     final leaveType = leave['leaveType'];
+    final leaveId = leave['id'];
     final start = (leave['startDate'] as Timestamp).toDate();
     final end = (leave['endDate'] as Timestamp).toDate();
-    final leaveId = leave['id'];
 
     final date = start == end
         ? _formatDate(start)
         : "${_formatDate(start)} - ${_formatDate(end)}";
 
-    return Container(
-      height: 90,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
+    return InkWell(
+      onTap: () async {
+        if (leaveId != null) {
+          await _markLeaveNotificationRead(leaveId);
+        }
+      },
+      child: Container(
+        height: 90,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    leaveType,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (_isHalfDay(leave)) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.25),
-                        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      leaveType,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: const Text(
-                        "½ Day",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    if (_isHalfDay(leave)) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          "½ Day",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(date, style: const TextStyle(color: Colors.white)),
-            ],
-          ),
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.orange,
-                  borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  "Pending",
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                const SizedBox(height: 4),
+                Text(date, style: const TextStyle(color: Colors.white)),
+              ],
+            ),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    "Pending",
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () =>
-                    _showDeleteConfirmation(leaveId, leaveType, date),
-                child: const Icon(Icons.delete, color: Colors.white),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () =>
+                      _showDeleteConfirmation(leaveId, leaveType, date),
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildPastLeaveCard(Map<String, dynamic> leave) {
     final leaveType = leave['leaveType'];
+    final leaveId = leave['id'];
     final start = (leave['startDate'] as Timestamp).toDate();
     final end = (leave['endDate'] as Timestamp).toDate();
     final status = leave['status'] == 'approved' ? "Taken" : "Rejected";
@@ -556,69 +699,76 @@ class _LeavePageState extends State<LeavePage> with SingleTickerProviderStateMix
         ? _formatDate(start)
         : "${_formatDate(start)} - ${_formatDate(end)}";
 
-    return Container(
-      height: 90,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
+    return InkWell(
+      onTap: () async {
+        if (leaveId != null) {
+          await _markLeaveNotificationRead(leaveId);
+        }
+      },
+      child: Container(
+        height: 90,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6BD5E1), Color(0xFF3A7BD5)],
+          ),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    leaveType,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (_isHalfDay(leave)) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.25),
-                        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      leaveType,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: const Text(
-                        "½ Day",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    if (_isHalfDay(leave)) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          "½ Day",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
+                const SizedBox(height: 4),
+                Text(date, style: const TextStyle(color: Colors.white)),
+              ],
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(height: 4),
-              Text(date, style: const TextStyle(color: Colors.white)),
-            ],
-          ),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(20),
+              child: Text(
+                status,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
             ),
-            child: Text(
-              status,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
